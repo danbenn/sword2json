@@ -33,7 +33,7 @@ function getText() {
         if(inModules.length !== 0) {
             console.log(inModules);
             inModules[0].renderText(document.getElementById("passageInput").value, {
-                footnotes: false,
+                footnotes: true,
                 crossReferences: true,
                 oneVersePerLine: true,
                 headings: true,

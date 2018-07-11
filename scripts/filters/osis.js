@@ -3,9 +3,7 @@ var bcv = new bcvParser();
 var sax = require("sax");
 var parser = sax.parser(true); //strict = true
 
-var jsonResult = {
-    verseData: [],
-};
+var jsonResult = [];
 
 //* SWFilter Options
 var swFilterOptions = {
@@ -124,7 +122,7 @@ function processText(inRaw, inDirection, inOptions) {
                         outText += "<span dir='rtl'><a href=\"?type=verseNum&osisRef=" + verseData.osisRef + "\" class='verse-number'> " + verseData.verseNum + " </a></span><span dir='rtl'>";
                     else
                         outText += "<a href=\"?type=verseNum&osisRef=" + verseData.osisRef + "\" class='verse-number'> " + verseData.verseNum + " </a>";
-                    jsonResult.verseData.push(["verse_num=" + verseData.verseNum]);
+                    jsonResult.push(["verse_num=" + verseData.verseNum]);
                 }
             break;
             case "note":
@@ -134,6 +132,7 @@ function processText(inRaw, inDirection, inOptions) {
                     osisRef = node.attributes.osisRef || node.attributes.annotateRef || verseData.osisRef;
                     if (!node.attributes.n) noteCount++;
                     var n = node.attributes.n || noteCount;
+                    jsonResult.push([`crossref=${osisRef}&${n}`]);
                     outText += "<a class='sword-footnote' href=\"?type=footnote&osisRef=" + osisRef + "&n=" + n+ "\"><sup>" + "*n" + n + "</sup></a>";
                 }
 
@@ -226,6 +225,8 @@ function processText(inRaw, inDirection, inOptions) {
             verseArray.push({text: (inOptions.oneVersePerLine) ? "<div class='verse' id = '" + inRaw[i].osisRef + "'>" + outText + "</div>" : "<span class='verse' id = '" + inRaw[i].osisRef + "'>" + outText + "</span>", osisRef: inRaw[i].osisRef});
         outText = "";
     }
+
+    console.log(jsonResult);
 
     if(inDirection === "RtoL")
         renderedText = "<div style='text-align: right;'>" + renderedText + "</div>";
