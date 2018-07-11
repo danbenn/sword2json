@@ -75,6 +75,12 @@ function processText(inRaw, inDirection, inOptions) {
             outText += processFootnotes(t, inOptions);
         } else if (quote) {
             if (quote.attributes.who === "Jesus" && inOptions.wordsOfChristInRed && t) {
+                const lastItem = jsonResult[jsonResult.length - 1][0];
+                if (lastItem.includes('wordsOfChrist')) {
+                    jsonResult[jsonResult.length -1][0] += t;
+                } else {
+                    jsonResult.push([`wordsOfChrist=${t}`]);
+                }
                 outText += "<span style='color: red'><span class='sword-woc'>" + t + " </span></span>";
             } else
                 outText += t;
