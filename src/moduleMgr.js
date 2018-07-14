@@ -1,7 +1,7 @@
 'use strict';
 
 var dataMgr = require("./dataMgr");
-var Module = require("./module");
+var Module = require("./SwordModule");
 
 
 function getModules(inCallback) {

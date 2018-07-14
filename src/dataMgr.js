@@ -1,6 +1,5 @@
 'use strict';
 
-var JSZip = require("jszip");
 var async = require("async");
 var IDB = require("./idbPluginWrapper");
 var tools = require("./tools");
