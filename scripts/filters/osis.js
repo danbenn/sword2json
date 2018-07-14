@@ -93,17 +93,25 @@ function processText(inRaw, inDirection, inOptions) {
                 break;
                 case "divineName":
                     if(title && inOptions.headings) {
+                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
                         titleText += "<span class='sword-divine-name'>" + t + "</span>";
                     }
                 break;
                 case "hi":
+                    if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
+                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
+                    }
                     outText += tagHi(currentNode, t);
                 break;
                 default:
+                    if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
+                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
+                    }
                     outText += t;
                 break;
             }
         } else {
+            jsonResult.push([t]);
             outText += t;
         }
 
@@ -175,10 +183,12 @@ function processText(inRaw, inDirection, inOptions) {
         //console.log("CLOSE:", tagName);
         switch (tagName) {
             case "title":
-                if (title.attributes.type === "section")
+                if (title.attributes.type === "section") {
                     outText = titleText + "</h3>" + outText;
-                else
+                } else {
+                    jsonResult.push([`heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
                     outText = titleText + "</h1>" + outText;
+                }
                 currentNode = null;
                 title = null;
                 titleText = "";
@@ -221,7 +231,7 @@ function processText(inRaw, inDirection, inOptions) {
 
     var tmp = "";
     for (var i=0; i<inRaw.length; i++) {
-        //console.log(inRaw[i].text);
+        // console.log(inRaw[i].text);
         tmp = "<xml osisRef='" + inRaw[i].osisRef + "' verseNum = '" + inRaw[i].verse + "'>" + inRaw[i].text + "</xml>";
         parser.write(tmp);
         parser.close();
