@@ -12,40 +12,21 @@ var otBin = null,
     ntBin = null;
 
 //Constructor
-function Module(inModName, inId, inConfig) {
-    if (!(this instanceof Module)) {
-        throw new TypeError("Module constructor cannot be called as a function.");
+
+class SwordModule {
+    constructor(inModName, inId, inConfig) {
+        this.modKey = inModName;
+        this.language = inConfig.language;
+        this.id = inId;
+        this.config = inConfig;
     }
 
-    this.modKey = inModName;
-    this.language = inConfig.language;
-    this.id = inId;
-    this.config = inConfig;
-}
+    //get the module binary files
+    getBinaryBlob(inId, inCallback) {
+        dataMgr.getBlob(inId, inCallback);
+    }
 
-Module.create = function (inModName, inId, inConfig) {
-    return new Module(inModName, inId, inConfig);
-};
-
-//get a module's config
-function getConfig(inId, inCallback) {
-    /*dataMgr.getDocument(inId, function (inError, inConfig) {
-        if (!inError)
-            inCallback(inConfig);
-    });*/
-}
-
-//get the module binary files
-function getBinaryBlob(inId, inCallback) {
-    dataMgr.getBlob(inId, inCallback);
-}
-
-//Module Instance
-Module.prototype = {
-    constructor: Module,
-    self: this,
-
-    renderText: function (inVKey, inOptions, inCallback) {
+    renderText(inVKey, inOptions, inCallback) {
         var bcvPos = null,
             blobId = null,
             self = this;
@@ -69,7 +50,7 @@ Module.prototype = {
                     if(bcvPos === null) {
                         inCallback({message: "The requested chapter is not available in this module."});
                     } else {
-                        getBinaryBlob(blobId, function (inError, inBlob) {
+                        self.getBinaryBlob(blobId, function (inError, inBlob) {
                             if (!inError) {
                                 if (self.config.modDrv === "zText" || self.config.modDrv === "zCom") {
                                     zText.getRawEntry(inBlob, bcvPos, vList, self.config.Encoding, inOptions.intro ? inOptions.intro : false, function (inError, inRaw) {
@@ -104,18 +85,17 @@ Module.prototype = {
         } else {
             inCallback({message: "Wrong passage. The requested chapter is not available in this module."});
         }
-    },
-
-    getAllBooks: function (inCallback) {
+    }
+    getAllBooks(inCallback) {
         versificationMgr.getAllBooks(this.config.bcvPosID, this.config.Versification, function (inError, inResult) {
             inCallback(inError, inResult);
         });
-    },
+    }
 
     //inOsis can be Matt.3
-    getVersesInChapter: function (inOsis) {
+    getVersesInChapter(inOsis) {
         return versificationMgr.getVersesInChapter(versificationMgr.getBookNum(inOsis.split(".")[0], this.config.Versification), inOsis.split(".")[1], this.config.Versification);
     }
-};
+}
 
-module.exports = Module;
+module.exports = SwordModule;
