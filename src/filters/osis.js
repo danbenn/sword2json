@@ -93,19 +93,22 @@ function processText(inRaw, inDirection, inOptions) {
                 break;
                 case "divineName":
                     if(title && inOptions.headings) {
-                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
+                        const strongsNumbers = getStrongsNumbers();
+                        jsonResult.push([t, strongsNumbers]);
                         titleText += "<span class='sword-divine-name'>" + t + "</span>";
                     }
                 break;
                 case "hi":
                     if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
-                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
+                        const strongsNumbers = getStrongsNumbers();
+                        jsonResult.push([t, strongsNumbers]);
                     }
                     outText += tagHi(currentNode, t);
                 break;
                 default:
                     if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
-                        jsonResult.push([t, currentNode.attributes.lemma.replace('strong:', '')]);
+                        const strongsNumbers = getStrongsNumbers();
+                        jsonResult.push([t, strongsNumbers]);
                     }
                     outText += t;
                 break;
@@ -253,6 +256,13 @@ function processText(inRaw, inDirection, inOptions) {
 }
 
 /* FUNCTIONS TO PROCESS SPECIFIC OSIS TAGS */
+
+function getStrongsNumbers() {
+    const strongsNumbersString = currentNode.attributes.lemma.replace(' ', '');
+    let strongsNumbers = strongsNumbersString.split('strong:');
+    strongsNumbers.shift();
+    return strongsNumbers;
+}
 
 function processFootnotes(t, inOptions) {
     var out = "";
