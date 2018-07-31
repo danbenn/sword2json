@@ -1,6 +1,6 @@
 var webpack = require("webpack");
 module.exports = {
-    entry: "./scripts/sword.js",
+    entry: "./src/sword.js",
     output: {
         path: "./dist/js",
         filename: "sword.min.js"
@@ -11,7 +11,4 @@ module.exports = {
             { test: "/en_bcv_parser.min.js/", loader: "exports?bcv_parser"}
         ],
     },
-    plugins: [
-        new webpack.optimize.UglifyJsPlugin({minimize: true})
-    ]
 };
