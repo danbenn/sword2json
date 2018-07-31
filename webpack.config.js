@@ -3,7 +3,7 @@ module.exports = {
     entry: "./src/main.js",
     output: {
         path: "./dist/js",
-        filename: "sword.js"
+        filename: "index.js"
     },
     module: {
         loaders: [
