@@ -1,27 +1,24 @@
 {
-  "name": "swordjs",
-  "version": "0.1.8",
-  "description": "swordjs - access modules from crosswire.org/sword in JS",
-  "main": "src/index.js",
+  "name": "sword2json",
+  "version": "0.1.0",
+  "description": "a JSON interface for Sword Bible modules",
+  "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zefanja/swordjs"
+    "url": "https://github.com/danbenn/sword2json"
   },
   "scripts": {
     "start": "webpack-dev-server --hot --progress --colors",
     "build": "webpack --progress --colors --config webpack.config.production.js"
   },
   "keywords": [
-    "gulp",
+    "sword2json",
     "swordjs",
-    "browserify"
+    "bible",
+    "sword module"
   ],
-  "author": "zefanja",
-  "license": "GPLv3",
-  "bugs": {
-    "url": "https://github.com/zefanja/swordjs/issues"
-  },
-  "homepage": "https://github.com/zefanja/swordjs",
+  "author": "danbennett <danielbennett@gmx.com>",
+  "license": "GPL",
   "dependencies": {
     "async": "^0.9.2",
     "bible-passage-reference-parser": "^2.0.1",

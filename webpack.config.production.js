@@ -1,6 +1,6 @@
 var webpack = require("webpack");
 module.exports = {
-    entry: "./src/index.js",
+    entry: "./index.js",
     output: {
         path: "./dist/js",
         filename: "sword.min.js"
