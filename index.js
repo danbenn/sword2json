@@ -1,14 +1,12 @@
 'use strict';
 
-var installMgr = require("./installMgr");
-var dataMgr = require("./dataMgr");
-var moduleMgr = require("./moduleMgr");
-var versificationMgr = require("./versificationMgr");
-var verseKey = require("./verseKey");
+var installMgr = require("./src/installMgr");
+var moduleMgr = require("./src/moduleMgr");
+var versificationMgr = require("./src/versificationMgr");
+var verseKey = require("./src/verseKey");
 
 var sword = {
 	installMgr: installMgr,
-	dataMgr: dataMgr,
 	moduleMgr: moduleMgr,
 	verseKey: verseKey,
 	versificationMgr: versificationMgr

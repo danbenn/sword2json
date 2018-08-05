@@ -1,276 +1,71 @@
 'use strict';
 
 var JSZip = require("jszip");
+var Blob = require('blob');
 var dataMgr = require("./dataMgr");
 var versificationMgr = require("./versificationMgr");
 var async = require("async");
 var tools = require("./tools");
-
-//console.log(VersificationMgr.getBooksInNT());
+var FileReader = require('filereader');
 
 var start = 0,
     buf = null,
     isEnd = false;
 
-//Get a list of all available repos/sources from CrossWire's masterRepoList.conf
-function getRepositories(inUrl, inCallback) {
-    if (inUrl instanceof Function) {
-        inCallback = inUrl;
-        inUrl = "http://crosswire.org/ftpmirror/pub/sword/masterRepoList.conf";
-    }
-
-    download(inUrl, "text", function (inError, inResponse) {
-        if (inResponse === "" && !inError) {
-            inCallback("Couldn't download master repo list!");
-        } else if (!inError) {
-            var repos = [],
-                split = null,
-                type = "",
-                repoName = "";
-            inResponse.split(/[\r\n]+/g).forEach(function (repo) {
-                split = repo.split("|");
-                if(split.length > 1 && split[0].search("CrossWire") !== -1) {
-                    repoName = split[0].split("=")[2];
-                    switch (repoName) {
-                        case "CrossWire":
-                            type = "main";
-                        break;
-                        case "CrossWire Beta":
-                            type = "beta";
-                        break;
-                        case "CrossWire av11n":
-                            type = "av";
-                        break;
-                        case "CrossWire Attic":
-                            type = "attic";
-                        break;
-                        case "CrossWire Wycliffe":
-                            type = "wycliffe";
-                        break;
-                        case "CrossWire av11n Attic":
-                            type = "avattic";
-                        break;
-                    }
-                    repos.push({
-                        name: repoName,
-                        type: type,
-                        url: split[1] + split[2],
-                        confUrl: "http://crosswire.org/ftpmirror" + split[2] + "/mods.d"
-                    });
-                }
-            });
-            //console.log("REPOS", repos);
-            inCallback(inError, repos);
-        } else {
-            inCallback(inError);
-        }
-    });
-}
-
-//dirty hack to get a list of modules that is available in a repository.
-//FIXME: unpack mods.d.tar.gz in Javascript (untar is the problem) or ask CrossWire to compress it as zip/gzip
-function getModules(inRepo, inCallback) {
-    getRemoteModules(inRepo, inCallback);
-}
-
-function getRemoteModules(inRepo, inUrl, inCallback) {
-    var customUrl = true;
-    if (inUrl instanceof Function) {
-        inCallback = inUrl;
-        customUrl = false;
-    }
-    if (!customUrl) {
-        download(inRepo.confUrl, "document", function (inError, inResponse) {
-            if (!inError) {
-                var tasks = [],
-                    url = "",
-                    a = inResponse.getElementsByTagName("a");
-                for(var i=0;i<a.length;i++) {
-                    if (a[i].href.search(".conf") !== -1) {
-                        url = a[i].baseURI + "/" + a[i].textContent;
-                        tasks.push((function (url) {
-                            return function (cb) {
-                                download(url, "text", function (inError, inConf) {
-                                    var configData = tools.readConf(inConf);
-                                    if (configData.ModDrv === "zText") {
-                                        configData["url"] = "http://www.crosswire.org/sword/servlet/SwordMod.Verify?modName=" + configData.moduleKey + "&" + inRepo.type + "=true&pkgType=raw";
-                                        cb(inError, configData);
-                                    } else {
-                                        cb(inError);
-                                    }
-                                });
-                            };
-                        })(url));
-                    }
-                }
-                async.parallel(tasks, function (inError, inModules) {
-                    inCallback(inError, tools.cleanArray(inModules).sort(tools.dynamicSortMultiple("Lang", "moduleKey")));
-                });
-            } else {
-                inCallback(inError);
-            }
-        });
-    } else {
-        inUrl = inUrl + "?modUrl=" + inRepo.url;
-        console.log(inUrl);
-        download(inUrl, "json", function(inError, inRemoteModules) {
-            console.log(inRemoteModules);
-            inCallback(inError, tools.cleanArray(inRemoteModules).sort(tools.dynamicSortMultiple("Lang", "moduleKey")));
-        });
-    }
-}
-
-function download(url, reponseType, inCallback, inProgressCallback) {
-    var xhr = new XMLHttpRequest({mozSystem: true, mozAnon: true});
-    xhr.open('GET', url, true);
-    //xhr.setRequestHeader("Accept-Encoding", "gzip, deflate");
-    xhr.responseType = reponseType; //"blob";
-    xhr.onreadystatechange = function (evt) {
-        //console.log(xhr.readyState, evt, xhr.status);
-        if (xhr.readyState == 4) {
-            if(xhr.status === 200)
-                inCallback(null, xhr.response);
-            else
-                inCallback({message: "Couldn't download module.", error: xhr.status});
+function installModule(fileBuffer, inCallback) {
+    const zip = new JSZip(fileBuffer);
+    for (var name in zip.files) {
+        if(name.search(".conf") !== -1) {
+            const configBlob = zip.files[name].asArrayBuffer();
+            const configBuffer = blobToBuffer(configBlob);
+            const configString = configBuffer.toString();
+            const configJson = tools.readConf(configString);
+            return bookChapterVerseIndex(zip, configJson);
         }
     };
-    xhr.onprogress = inProgressCallback;
-    xhr.onerror = function (inError) {
-        inCallback(inError);
-    };
-    xhr.send(null);
-}
-
-//Install a module. inUrl can be an url or a file blob (zipped module file)
-function installModule (inUrl, inCallback, inProgressCallback) {
-    if(typeof inUrl === "string") {
-        download(inUrl, "document", function (inError, inResponse) {
-            if(!inError) {
-                var newUrl = inResponse.getElementsByTagName("a")[0].href;
-                download(newUrl, "blob", function (inError, inBlob) {
-                    if(!inError) _installModule(inBlob, inCallback);
-                    else inCallback(inError);
-                },
-                inProgressCallback);
-            } else inCallback(inError);
-        });
-    } else {
-        _installModule(inUrl, inCallback);
-    }
-}
-
-function _installModule(inBlob, inCallback) {
-    var blob = null;
-    var zipReader = new FileReader();
-    zipReader.onload = function(evt) {
-        var zip = new JSZip(evt.target.result);
-        for (var name in zip.files) {
-            if(name.search(".conf") !== -1) {
-                //console.log(zip.files[name]);
-                dataMgr.saveConfig(new Blob([zip.files[name].asArrayBuffer()]),
-                    function (inError, inDoc) {
-                        if(!inError) buildIndex(zip, inDoc.v11n, inDoc, inCallback);
-                        else inCallback(inError);
-                    }
-                );
-            }
-        }
-    };
-
-    zipReader.onerror = function (inError) {
-        inCallback(inError);
-    };
-    zipReader.readAsArrayBuffer(inBlob);
-}
-
-//Remove a module
-function removeModule(inModuleKey, inCallback) {
-    if(typeof inModuleKey === "string")
-        dataMgr.removeModule(inModuleKey, inCallback);
-    else
-        inCallback({message: "inModuleKey must be a string!"});
 }
 
 //Build the index with all entry points for a book or chapter
-function buildIndex(inZip, inV11n, inDoc, inCallback) {
-    var files = {};
+function bookChapterVerseIndex(zip, configJson) {
+    const files = {};
     files["bin"] = [];
 
-    for (var name in inZip.files) {
-        if(inDoc.modDrv === "zText" || inDoc.modDrv === "zCom") {
-            if(name.search(/nt.[bc]zs/) !== -1)
-                files["ntB"] = name;
-            else if(name.search(/nt.[bc]zv/) !== -1)
-                files["ntCV"] = name;
-            else if(name.search(/ot.[bc]zs/) !== -1)
-                files["otB"] = name;
-            else if(name.search(/ot.[bc]zv/) !== -1)
-                files["otCV"] = name;
-            else if (name.search(".conf") === -1)
-                files.bin.push({blob: new Blob([inZip.files[name].asUint8Array()]), name: name});
-        } else if (inDoc.modDrv === "RawCom") {
-            if(name.search("nt.vss") !== -1)
-                files["ntIdx"] = name;
-            else if(name.search("ot.vss") !== -1)
-                files["otIdx"] = name;
-            else if (name.search(".conf") === -1)
-                files.bin.push({blob: new Blob([inZip.files[name].asUint8Array()]), name: name});
-        }
+    for (var name in zip.files) {
+        if(name.search(/nt.[bc]zs/) !== -1)
+            files["ntB"] = name;
+        else if(name.search(/nt.[bc]zv/) !== -1)
+            files["ntCV"] = name;
+        else if(name.search(/ot.[bc]zs/) !== -1)
+            files["otB"] = name;
+        else if(name.search(/ot.[bc]zv/) !== -1)
+            files["otCV"] = name;
+        else if (name.search(".conf") === -1)
+            files.bin.push({blob: zip.files[name].asUint8Array(), name: name});
     }
+    const versification = configJson.Versification;
 
-    //console.log(files);
+    const bookPosOT = getBookPositions(zip.files[files.otB].asUint8Array());
+    const rawPosOT = getChapterVersePositions(zip.files[files.otCV].asUint8Array(),
+        bookPosOT, "ot", versification);
 
-    async.series([
-        function (cb) {
-            dataMgr.saveModule(files.bin, inDoc, function (inError, inResponse) {
-                if(!inError) cb(null);
-                else cb(inError);
-            });
-        },
-        function (cb) {
-            var bookPosOT = null,
-                chapterVersePosOT = null,
-                bookPosNT = null,
-                chapterVersePosNT = null,
-                rawPosNT = null,
-                rawPosOT = null;
+    const bookPosNT = getBookPositions(zip.files[files.ntB].asUint8Array());
+    const rawPosNT = getChapterVersePositions(zip.files[files.ntCV].asUint8Array(),
+        bookPosNT, "nt", versification);
 
-            if (files.otB) {
-                bookPosOT = getBookPositions(inZip.files[files.otB].asUint8Array());
-                rawPosOT = getChapterVersePositions(inZip.files[files.otCV].asUint8Array(), bookPosOT, "ot", inV11n);
-            }
-            if (files.ntB) {
-                bookPosNT = getBookPositions(inZip.files[files.ntB].asUint8Array());
-                rawPosNT = getChapterVersePositions(inZip.files[files.ntCV].asUint8Array(), bookPosNT, "nt", inV11n);
-            }
-            //console.log(bookPosOT, bookPosNT);
+    const index = {
+        rawPosOT,
+        rawPosNT,
+    }
+    return index;
+}
 
-            if (inDoc.modDrv === "RawCom" && files.otIdx) {
-                rawPosOT = getRawPositions(inZip.files[files.otIdx].asUint8Array(), "ot");
-            }
-
-            if (inDoc.modDrv === "RawCom" && files.ntIdx) {
-                rawPosNT = getRawPositions(inZip.files[files.ntIdx].asUint8Array(), "nt");
-            }
-            //console.log(rawPosOT, rawPosNT);
-
-            dataMgr.saveBCVPos(rawPosOT, rawPosNT, inDoc, function (inError, inResponse) {
-                if(!inError) cb(null);
-                else cb(inError);
-            });
-        }
-        ], function (inError, inResult) {
-            if(!inError) inCallback(null, inDoc.id);
-            else {
-                //If we got an error while saving the blob files, delete the config entry in the database
-                dataMgr.remove(inDoc.id, function (inError) {
-                    //console.log(inError);
-                });
-                inCallback(inError);
-            }
-
-        }
-    );
+function blobToBuffer(ab) {
+    var buf = new Buffer(ab.byteLength);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; ++i) {
+        buf[i] = view[i];
+    }
+    return buf;
 }
 
 //Get the positions of each book
@@ -480,11 +275,7 @@ function getInt48FromStream(inBuf, inCallback) {
 }
 
 var InstallMgr = {
-    getRepositories: getRepositories,
-    getModules: getModules,
-    getRemoteModules: getRemoteModules,
     installModule: installModule,
-    removeModule: removeModule
 };
 
 module.exports = InstallMgr;

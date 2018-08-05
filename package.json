@@ -24,6 +24,7 @@
     "bible-passage-reference-parser": "^2.0.1",
     "buffer": "^5.2.0",
     "events": "^3.0.0",
+    "filereader": "^0.10.3",
     "idb-wrapper": "~1.4.1",
     "jszip": "~2.4.0",
     "object-assign": "~2.0.0",
