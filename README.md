@@ -1,22 +1,17 @@
-sword.js
+sword2json
 =======
 
-```sword.js``` is a pure Javascript library to read the bible modules from [Crosswire](http://crosswire.org/sword). It currently supports only compressed (zText) bible modules. [BibleZ NG](https://github.com/zefanja/biblez-ng) is based on this library.
+```sword2json``` is a pure Javascript library to read Bible modules from [Crosswire](http://crosswire.org/sword).
 
 Build
 -----
 
 Install ```webpack``` an run ```npm run build```. For development use ```npm start``` and open ```http://localhost:8080/webpack-dev-server/``` in your browser.
 
-Usage
------
-
-```npm install swordjs``` then you can ```require``` it.
-
 API
 ---
 
-```sword.js``` is currently in a alpha version, so the API will likely change in the future.
+```sword2json``` is currently in a alpha version, so the API will likely change in the future.
 
 Most API calls take a callback as the last argument. The callback will return ```null``` or an ```error``` as first argument. The second, third, ... argument is the reponse from the API.
 
@@ -106,4 +101,9 @@ Returns the previous chapter that comes before ```inPassage```. If you pass "Mar
 Licence
 -------
 
-```sword.js``` is licenced under the GNU GPLv3.
+```sword2json``` is licenced under GNU GPL.
+
+Build
+-----
+
+This a fork of Sword.js, from zefanja (github.com/zefanja). This wouldn't be possible without his pioneering work!
