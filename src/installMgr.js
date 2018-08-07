@@ -1,60 +1,76 @@
 'use strict';
 
-var JSZip = require("jszip");
-var Blob = require('blob');
-var dataMgr = require("./dataMgr");
-var versificationMgr = require("./versificationMgr");
-var async = require("async");
-var tools = require("./tools");
-var FileReader = require('filereader');
+var versificationMgr = require('./versificationMgr');
+var async = require('async');
+var tools = require('./tools');
 
 var start = 0,
     buf = null,
     isEnd = false;
 
-function installModule(fileBuffer, inCallback) {
-    const zip = new JSZip(fileBuffer);
-    for (var name in zip.files) {
-        if(name.search(".conf") !== -1) {
-            const configBlob = zip.files[name].asArrayBuffer();
-            const configBuffer = blobToBuffer(configBlob);
-            const configString = configBuffer.toString();
+function loadModule(files) {
+    for (var name in files) {
+        if(name.search('.conf') !== -1) {
+            const configString = Uint8ArrayToStringNodeJS(files[name])
             const configJson = tools.readConf(configString);
-            return bookChapterVerseIndex(zip, configJson);
+            const index = buildIndex(files, configJson);
+            return index;
         }
     };
 }
 
-//Build the index with all entry points for a book or chapter
-function bookChapterVerseIndex(zip, configJson) {
+function loadNodeJSLocalModule(filename) {
+    const fs = require('fs');
+    const JSZip = require('jszip');
+    const contents = fs.readFileSync(filename);
+    const zip = new JSZip(contents);
+    const filenames = Object.keys(zip.files);
     const files = {};
-    files["bin"] = [];
+    filenames.forEach((name) => {
+      files[name] = zip.files[name].asUint8Array();
+    });
+    return loadModule(files);
+}
 
-    for (var name in zip.files) {
-        if(name.search(/nt.[bc]zs/) !== -1)
-            files["ntB"] = name;
-        else if(name.search(/nt.[bc]zv/) !== -1)
-            files["ntCV"] = name;
-        else if(name.search(/ot.[bc]zs/) !== -1)
-            files["otB"] = name;
-        else if(name.search(/ot.[bc]zv/) !== -1)
-            files["otCV"] = name;
-        else if (name.search(".conf") === -1)
-            files.bin.push({blob: zip.files[name].asUint8Array(), name: name});
+function Uint8ArrayToStringNodeJS(blob) {
+    const buffer = blobToBuffer(blob);
+    return buffer.toString();
+}
+
+//Build the index with all entry points for a book or chapter
+function buildIndex(files, configJson) {
+    const oldTestament = {};
+    const newTestament = {};
+
+    for (var name in files) {
+        const file = files[name];
+        if (name.includes('ot.bzs')) {
+            oldTestament['bookPositions'] = file;
+        }
+        else if (name.includes('ot.bzv')) {
+            oldTestament['chapterVersePositions'] = file;
+        }
+        else if (name.includes('nt.bzs')) {
+            newTestament['bookPositions'] = file;
+        }
+        else if (name.includes('nt.bzv')) {
+            newTestament['chapterVersePositions'] = file;
+        }
     }
+
     const versification = configJson.Versification;
 
-    const bookPosOT = getBookPositions(zip.files[files.otB].asUint8Array());
-    const rawPosOT = getChapterVersePositions(zip.files[files.otCV].asUint8Array(),
-        bookPosOT, "ot", versification);
+    const bookPosOT = getBookPositions(oldTestament.bookPositions);
+    const rawPosOT = getChapterVersePositions(oldTestament.chapterVersePositions,
+        bookPosOT, 'ot', versification);
 
-    const bookPosNT = getBookPositions(zip.files[files.ntB].asUint8Array());
-    const rawPosNT = getChapterVersePositions(zip.files[files.ntCV].asUint8Array(),
-        bookPosNT, "nt", versification);
+    const bookPosNT = getBookPositions(newTestament.bookPositions);
+    const rawPosNT = getChapterVersePositions(newTestament.chapterVersePositions,
+        bookPosNT, 'nt', versification);
 
     const index = {
-        rawPosOT,
-        rawPosNT,
+        'rawPosOT': rawPosOT,
+        'rawPosNT': rawPosNT,
     }
     return index;
 }
@@ -114,8 +130,8 @@ function dumpBytes(inBuf) {
 //Get the position of each chapter and verse
 function getChapterVersePositions(inBuf, inBookPositions, inTestament, inV11n) {
     dumpBytes(inBuf);
-    var booksStart = (inTestament === "ot") ? 0 : versificationMgr.getBooksInOT(inV11n);
-    var booksEnd = (inTestament === "ot") ? versificationMgr.getBooksInOT(inV11n) : versificationMgr.getBooksInOT(inV11n)+versificationMgr.getBooksInNT(inV11n);
+    var booksStart = (inTestament === 'ot') ? 0 : versificationMgr.getBooksInOT(inV11n);
+    var booksEnd = (inTestament === 'ot') ? versificationMgr.getBooksInOT(inV11n) : versificationMgr.getBooksInOT(inV11n)+versificationMgr.getBooksInNT(inV11n);
     var chapterStartPos = 0,
         lastNonZeroStartPos = 0,
         length = 0,
@@ -138,7 +154,7 @@ function getChapterVersePositions(inBuf, inBookPositions, inTestament, inV11n) {
             chapterStartPos = 0;
             lastNonZeroStartPos = 0;
             chapt = {};
-            chapt["verses"] = [];
+            chapt['verses'] = [];
             length = 0;
             verseMax = versificationMgr.getVersesInChapter(b,c+1, inV11n);
             for (var v = 0; v<verseMax; v++) {
@@ -149,33 +165,33 @@ function getChapterVersePositions(inBuf, inBookPositions, inTestament, inV11n) {
                     lastNonZeroStartPos = startPos;
 
                 length = getShortIntFromStream(inBuf)[0];
-                //console.log("startPos, length", startPos, length);
+                //console.log('startPos, length', startPos, length);
                 if (v === 0) {
                     chapterStartPos = startPos;
                     bookStartPos = 0;
                     if (booknum < inBookPositions.length) {
-                        //console.log("inBookPositions.startPos", inBookPositions[booknum].startPos, booknum, inBookPositions.length);
+                        //console.log('inBookPositions.startPos', inBookPositions[booknum].startPos, booknum, inBookPositions.length);
                         bookStartPos = inBookPositions[booknum].startPos;
                     }
-                    chapt["startPos"] = chapterStartPos;
-                    chapt["booknum"] = b;
-                    //chapt["bookRelativeChapterNum"] = c;
-                    chapt["bookStartPos"] = bookStartPos;
+                    chapt['startPos'] = chapterStartPos;
+                    chapt['booknum'] = b;
+                    //chapt['bookRelativeChapterNum'] = c;
+                    chapt['bookStartPos'] = bookStartPos;
                 }
                 if (booknum === 0 && startPos === 0 && length === 0) {
                     if (chapt !== {}) {
-                        chapt["verses"].push({startPos: 0, length: 0});
+                        chapt['verses'].push({startPos: 0, length: 0});
                     }
                 } else {
                     if (chapt !== {}) {
-                        chapt["verses"].push({startPos: startPos - chapterStartPos, length: length});
+                        chapt['verses'].push({startPos: startPos - chapterStartPos, length: length});
                     }
                 }
             } //end verse
             if (chapt != {}) {
-                //console.log("LENGTH:", lastNonZeroStartPos, chapterStartPos, length, c, chapt, chapters);
+                //console.log('LENGTH:', lastNonZeroStartPos, chapterStartPos, length, c, chapt, chapters);
                 chapterLength = lastNonZeroStartPos - chapterStartPos + length;
-                chapt["length"] = chapterLength;
+                chapt['length'] = chapterLength;
                 chapters[bookData.abbrev].push(chapt);
                 if (isNaN(chapterLength) || chapterLength === 0) {
                     foundEmptyChapter++;
@@ -187,7 +203,7 @@ function getChapterVersePositions(inBuf, inBookPositions, inTestament, inV11n) {
             getInt48FromStream(inBuf);
             getShortIntFromStream(inBuf);
         } //end chapters
-        //console.log("Empty Chapters:", foundEmptyChapter);
+        //console.log('Empty Chapters:', foundEmptyChapter);
         if(foundEmptyChapter === bookData.maxChapter) {
             delete chapters[bookData.abbrev];
         }
@@ -205,14 +221,14 @@ function getRawPositions(inFile, inTestament, inV11n) {
     getInt48FromStream(inFile);
     getInt48FromStream(inFile);
 
-    var booksStart = (inTestament === "ot") ? 0 : versificationMgr.getBooksInOT(inV11n);
-    var booksEnd = (inTestament === "ot") ? versificationMgr.getBooksInOT(inV11n) : versificationMgr.getBooksInOT(inV11n)+versificationMgr.getBooksInNT(inV11n);
+    var booksStart = (inTestament === 'ot') ? 0 : versificationMgr.getBooksInOT(inV11n);
+    var booksEnd = (inTestament === 'ot') ? versificationMgr.getBooksInOT(inV11n) : versificationMgr.getBooksInOT(inV11n)+versificationMgr.getBooksInNT(inV11n);
     var length = 0,
         verseMax = 0,
         bookData = null,
         startPos = 0,
         data = {},
-        osis = "";
+        osis = '';
 
     for (var b = booksStart; b<booksEnd; b++) {
         bookData = versificationMgr.getBook(b, inV11n);
@@ -231,8 +247,8 @@ function getRawPositions(inFile, inTestament, inV11n) {
                 startPos = getIntFromStream(inFile)[0];
                 length = getShortIntFromStream(inFile)[0];
                 if (length !== 0) {
-                    //console.log("VERSE", startPos, length);
-                    osis = bookData.abbrev + "." + parseInt(c+1, 10) + "." + parseInt(v+1, 10);
+                    //console.log('VERSE', startPos, length);
+                    osis = bookData.abbrev + '.' + parseInt(c+1, 10) + '.' + parseInt(v+1, 10);
                     data[osis] = {startPos: startPos, length: length};
                 }
             } //end verse
@@ -275,7 +291,8 @@ function getInt48FromStream(inBuf, inCallback) {
 }
 
 var InstallMgr = {
-    installModule: installModule,
+    loadModule: loadModule,
+    loadNodeJSLocalModule,
 };
 
 module.exports = InstallMgr;
