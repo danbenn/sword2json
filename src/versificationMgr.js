@@ -1,6 +1,5 @@
 'use strict';
 
-var dataMgr = require("./dataMgr");
 var kjv = require("../data/kjv.json");
 var german = require("../data/german.json");
 var catholic = require("../data/catholic.json");
@@ -88,43 +87,6 @@ function getBookNum(inOsis, v11n) {
         return versificationMgr.kjv.osisToBookNum[inOsis];
 }
 
-function getAllBooks(inId, v11n, inCallback) {
-    var books = [];
-    /*if (v11n !== undefined && versificationMgr[v11n]) {
-        books.push.apply(books, versificationMgr[v11n].ot);
-        books.push.apply(books, versificationMgr[v11n].nt);
-    } else {
-        books.push.apply(books, versificationMgr.kjv.ot);
-        books.push.apply(books, versificationMgr.kjv.nt);
-    }
-    return books;*/
-    var v11nData = (v11n && versificationMgr[v11n]) ? versificationMgr[v11n] : versificationMgr.kjv;
-    dataMgr.get(inId, function (inError, inResult) {
-        if(!inError) {
-            if(inResult.hasOwnProperty("ot")) {
-                var bnOt = 0;
-                for (var otBook in inResult.ot) {
-                    bnOt = inResult.ot[otBook][0].booknum;
-                    v11nData.ot[bnOt]["bookNum"] = bnOt;
-                    books.push(v11nData.ot[bnOt]);
-                }
-            }
-            if(inResult.hasOwnProperty("nt")) {
-                var booksMax = getBooksInOT(v11n),
-                    bnNt = 0;
-                for (var ntBook in inResult.nt) {
-                    bnNt = inResult.nt[ntBook][0].booknum-booksMax;
-                    v11nData.nt[bnNt]["bookNum"] = bnNt+booksMax;
-                    books.push(v11nData.nt[bnNt]);
-                }
-            }
-            if (inCallback) inCallback(null, books);
-        } else {
-            if (inCallback) inCallback(inError);
-        }
-    });
-}
-
 module.exports = {
     getBooksInOT: getBooksInOT,
     getBooksInNT: getBooksInNT,
@@ -132,5 +94,4 @@ module.exports = {
     getVersesInChapter: getVersesInChapter,
     getBook: getBook,
     getBookNum: getBookNum,
-    getAllBooks: getAllBooks
 };

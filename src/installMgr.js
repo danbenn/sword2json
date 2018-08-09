@@ -3,6 +3,7 @@
 var versificationMgr = require('./versificationMgr');
 var async = require('async');
 var tools = require('./tools');
+const SwordModule = require('./SwordModule');
 
 var start = 0,
     buf = null,
@@ -14,7 +15,7 @@ function loadModule(files) {
             const configString = Uint8ArrayToStringNodeJS(files[name])
             const configJson = tools.readConf(configString);
             const index = buildIndex(files, configJson);
-            return index;
+            return new SwordModule(index);
         }
     };
 }
@@ -50,11 +51,17 @@ function buildIndex(files, configJson) {
         else if (name.includes('ot.bzv')) {
             oldTestament['chapterVersePositions'] = file;
         }
+        else if (name.includes('ot.bzz')) {
+            oldTestament['binary'] = file;
+        }
         else if (name.includes('nt.bzs')) {
             newTestament['bookPositions'] = file;
         }
         else if (name.includes('nt.bzv')) {
             newTestament['chapterVersePositions'] = file;
+        }
+        else if (name.includes('nt.bzz')) {
+            newTestament['binary'] = file;
         }
     }
 
@@ -71,6 +78,9 @@ function buildIndex(files, configJson) {
     const index = {
         'rawPosOT': rawPosOT,
         'rawPosNT': rawPosNT,
+        'binaryOT': oldTestament['binary'],
+        'binaryNT': newTestament['binary'],
+        'config': configJson,
     }
     return index;
 }
