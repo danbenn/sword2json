@@ -3,17 +3,8 @@ sword2json
 
 ```sword2json``` is a pure Javascript library to read Bible modules from [Crosswire](http://crosswire.org/sword).
 
-Build
------
-
-Install ```webpack``` an run ```npm run build```. For development use ```npm start``` and open ```http://localhost:8080/webpack-dev-server/``` in your browser.
-
 API
 ---
-
-```sword2json``` is currently in a alpha version, so the API will likely change in the future.
-
-Most API calls take a callback as the last argument. The callback will return ```null``` or an ```error``` as first argument. The second, third, ... argument is the reponse from the API.
 
 ### installMgr ###
 
