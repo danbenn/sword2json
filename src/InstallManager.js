@@ -1,8 +1,4 @@
-// const HTMLParser = require('fast-html-parser');
-const tools = require('./tools');
-const { ModuleConfig } = require('./ModuleConfig');
-// Enable fetch api in Node.js
-const fetch = tools.envType() === 'node' ? require('node-fetch') : fetch;
+
 
 /**
  * Class to manage Sword module installation.
@@ -93,8 +89,8 @@ class InstallManager {
 
 async function getModuleConfig(moduleName) {
   // Config file contains metadata like full name, copyright info, etc.
-  const configFileUrl = 'https://crosswire.org/ftpmirror' +
-  `/pub/sword/raw/mods.d/${moduleName}.conf`;
+  const configFileUrl = 'https://crosswire.org/ftpmirror'
+  + `/pub/sword/raw/mods.d/${moduleName}.conf`;
   try {
     // Needed to avoid network errors due to so many requests
     const timeToWait = Math.floor(Math.random() * 50);
@@ -123,4 +119,3 @@ demo();
 module.exports = {
   InstallManager,
 };
-

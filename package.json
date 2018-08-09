@@ -7,10 +7,6 @@
     "type": "git",
     "url": "https://github.com/danbenn/sword2json"
   },
-  "scripts": {
-    "start": "webpack-dev-server --hot --progress --colors",
-    "build": "webpack --progress --colors --config webpack.config.production.js"
-  },
   "keywords": [
     "sword2json",
     "swordjs",
@@ -21,9 +17,11 @@
   "license": "GPL",
   "dependencies": {
     "async": "^0.9.2",
+    "babel-eslint": "^8.2.6",
     "bible-passage-reference-parser": "^2.0.1",
     "blob": "0.0.4",
     "buffer": "^5.2.0",
+    "eslint-config-airbnb": "^17.0.0",
     "events": "^3.0.0",
     "filereader": "^0.10.3",
     "jszip": "~2.4.0",
@@ -32,5 +30,9 @@
     "timers": "^0.1.1",
     "xmlbuilder": "^10.0.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb-base": "^13.0.0",
+    "eslint-plugin-import": "^2.13.0"
+  }
 }

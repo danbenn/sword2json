@@ -1,13 +1,11 @@
-'use strict';
+const installMgr = require('./src/installMgr');
+const versificationMgr = require('./src/versificationMgr');
+const verseKey = require('./src/verseKey');
 
-var installMgr = require("./src/installMgr");
-var versificationMgr = require("./src/versificationMgr");
-var verseKey = require("./src/verseKey");
-
-var sword = {
-	installMgr: installMgr,
-	verseKey: verseKey,
-	versificationMgr: versificationMgr
+const sword = {
+  installMgr,
+  verseKey,
+  versificationMgr,
 };
 
 module.exports = sword;
