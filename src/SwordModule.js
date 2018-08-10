@@ -1,7 +1,7 @@
-const verseKey = require('./verseKey');
+const verseKey = require('./VerseMetadata');
 const BlobReader = require('./BlobReader');
 const filterMgr = require('./filterMgr');
-const versificationMgr = require('./versificationMgr');
+const versificationMgr = require('./VerseScheme');
 
 
 class SwordModule {

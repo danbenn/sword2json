@@ -1,6 +1,6 @@
-const osis = require('./filters/osis');
-const plain = require('./filters/plain');
-const thml = require('./filters/thml');
+const osis = require('./OsisParser');
+const plain = require('./PlainParser');
+const thml = require('./ThmlParser');
 
 function processText(inRaw, inSource, inDirection, inOptions) {
   // console.log(inRaw, inSource, inDirection, inOptions);

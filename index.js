@@ -1,11 +1,11 @@
 const installMgr = require('./src/installMgr');
-const versificationMgr = require('./src/versificationMgr');
-const verseKey = require('./src/verseKey');
+const VerseScheme = require('./src/VerseScheme');
+const VerseMetadata = require('./src/VerseMetadata');
 
 const sword = {
   installMgr,
-  verseKey,
-  versificationMgr,
+  VerseMetadata,
+  VerseScheme,
 };
 
 module.exports = sword;

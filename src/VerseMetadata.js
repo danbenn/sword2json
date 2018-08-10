@@ -1,4 +1,4 @@
-const versificationMgr = require('./versificationMgr');
+const versificationMgr = require('./VerseScheme');
 const bcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
 
 const bcv = new bcvParser();

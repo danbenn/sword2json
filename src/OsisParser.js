@@ -1,6 +1,6 @@
-const bcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
+const BcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
 
-const bcv = new bcvParser();
+const bcv = new BcvParser();
 const sax = require('sax');
 
 const parser = sax.parser(true); // strict = true

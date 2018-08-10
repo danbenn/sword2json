@@ -1,5 +1,5 @@
 const async = require('async');
-const versificationMgr = require('./versificationMgr');
+const versificationMgr = require('./VerseScheme');
 const SwordModule = require('./SwordModule');
 
 let start = 0,
