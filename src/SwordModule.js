@@ -1,5 +1,5 @@
 const verseKey = require('./verseKey');
-const zText = require('./zText');
+const BlobReader = require('./BlobReader');
 const filterMgr = require('./filterMgr');
 const versificationMgr = require('./versificationMgr');
 
@@ -29,14 +29,10 @@ class SwordModule {
       throw new Error('Unable to retrieve book from module');
     }
 
-    zText.getRawEntry(binaryBlob, bookChapterVersePosition, verseList,
-      this.config.Encoding, inOptions.intro ? inOptions.intro : false,
-      function (isError, inRaw) {
-        if (isError) {
-          throw isError;
-        }
-        const result = filterMgr.processText(inRaw, this.config.SourceType, this.config.Direction, inOptions);
-      });
+    const chapterXML = BlobReader.getXMLforChapter(binaryBlob, bookChapterVersePosition,
+      verseList, this.config.Encoding);
+
+    // const result = filterMgr.processText(inRaw, this.config.SourceType, this.config.Direction, inOptions);
   }
 
   // inOsis can be Matt.3
