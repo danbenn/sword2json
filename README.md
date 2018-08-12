@@ -1,100 +1,53 @@
-sword2json
-=======
+# sword2json
 
-```sword2json``` is a pure Javascript library to read Bible modules from [Crosswire](http://crosswire.org/sword).
+```sword2json``` is a pure Javascript library to read Bible modules from [Crosswire Bible Society](http://crosswire.org/sword).
 
-API
----
+__WARNING__: this code is in alpha, and still under active development.
 
-### installMgr ###
+## Getting Started
 
-#### installMgr.getRepositories(inCallback) ####
-Get a list of all available repositories and takes a callback funtion as argument. The callback will return an array of the repositories as second argument (first will be ```null``` or an ```error```). Currently only the following CrossWire repos are supported:
-* main
-* beta
-* av11n
-* attic
-* Wycliffe
-* av11n attic
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-#### installMgr.getRemoteModules(inRepo, inUrl, inCallback) ####
-Get a list of all modules in a repository. ```inRepo``` is an object containing the repository url and the repository type. ```inUrl``` is optional. The callback will return an array with all modules.
+### Prerequisites
 
-#### installMgr.installModule(inUrl, inCallback, inProgressCallback) ####
-This will install a module from ```inUrl```. You can also pass a file blob from a zipped module file for offline installation as first argument. The callback will return ```null``` or an ```error``` as the first argument. The second callback is optional. It will report the progress of the module download.
+You'll need to install Node.js ([here](https://nodejs.org/en/download/)) and NPM ([here](https://www.npmjs.com/get-npm)) on your system to use this project.
 
-#### installMgr.removeModule(iModuleKey, inCallback) ####
-This will remove the module with the ```inModuleKey```. The callback will return ```null``` or an ```error``` as the first argument.
+### Installing
+To use in your project, install via NPM:
+```
+$ npm install sword2json
+```
+To access JSON from a specific verse or chapter:
+```
+const sword2json = require('sword2json');
+const fs = require('fs');
 
-### moduleMgr ###
+const filename = './path/to/your/file/ESV2011.zip';
+const contents = fs.readFileSync(filename);
+const swordModule = SwordJS.SwordModule.fromNodeBuffer(contents);
+const jsonResult = swordModule.renderText('John 1');
+console.log(jsonResult);
+```
+To set up a development environment, clone the repository:
+```
+$ git clone https://github.com/danbenn/sword2json.git && cd sword2json/
+```
+Run the sample code to see JSON for John 1, from the English Standard Version (ESV):
 
-####moduleMgr.getModules(inCallback) ####
-This will return a list of all installed modules.
-
-### Module ###
-Each module has the following properties and API:
-
-#### config ####
-This property contains the all the module information that is normally found in a modules *.conf file.
-
-#### renderText(inPassage, inOptions, inCallback) ####
-```inPassage``` is a passage in a bible like ```Gen 1``` or ```Romans 3```. ```inOptions``` is an Object and optional. It can contain the following porperties (default values):
-
-```javascript
-{
-    oneVersePerLine: false,
-    footnotes: false,
-    crossReferences: false,
-    headings: false,
-    wordsOfChristInRed: false,
-    intro: false, //show book or chapter introductions
-}
+```
+$ node example.js
 ```
 
-The callback will return an object as second argument:
+## Authors
 
-Example:
-```javascript
-{
-    text: "...", //the rendered text (HTML),
-    footnotes: {
-        "Gen.1.1": [{note: "/*Note text*/", n: "1"}, {...}],
-        "Gen.1.4": [{note: "/*Note text*/", n: "2"}, {...}],
-        ...
-    }
-}
-```
+* **Dan Bennett** - *Refactoring and JSON filter* - [Github](https://github.com/PurpleBooth)
+* **zefanja** - *Initial work of sword.js* - [Github](https://github.com/zefanja)
 
-#### getAllBooks(inCallback) ####
-Returns a list of all books in a module.
+## License
 
-###verseKey###
+This project is licensed under the GPLv3 License.
 
-#### verseKey.parse(inPassage, inV11n) ####
-Takes a passage (e.g. Matt 1:1) as argument an returns an object like this:
+## Acknowledgments
+This project would not have been possible without the support of the following people: 
+* David Instone-Brewer of Tyndale House
 
-```javascript
-{
-    osisRef: "Matt.1.1",
-    book: "Matt",
-    bookNum: 39,
-    chapter: 1
-    verse: 1 //this can also be NaN if you pass a passage the has no verse in it like "Matt 1".
-}
-```
-
-#### verseKey.next(inPassage, inV11n) ####
-Returns the next chapter that follows ```inPassage```. If you pass "Matt 1" you will get an verseKey object for "Matt 2".
-
-#### verseKey.previous(inPassage, inV11n) ####
-Returns the previous chapter that comes before ```inPassage```. If you pass "Mark 1" you will get an verseKey object for "Matt 28".
-
-Licence
--------
-
-```sword2json``` is licenced under GNU GPL.
-
-Build
------
-
-This a fork of Sword.js, from zefanja (github.com/zefanja). This wouldn't be possible without his pioneering work!
