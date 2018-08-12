@@ -1,9 +1,7 @@
-
-
 /**
  * Class to manage Sword module installation.
  */
-class InstallManager {
+class RemoteRepo {
   /**
    * Get a list of all available repos/sources from CrossWire's masterRepoList
    */
@@ -106,16 +104,11 @@ async function getModuleConfig(moduleName) {
 }
 
 async function demo() {
-  const mgr = new InstallManager();
-  const moduleNodes = await mgr.installModule('esv2011');
-  // moduleNodes.forEach((moduleNode) => {
-  //   console.log(moduleNode);
-  //   console.log('******');
-  // });
-  // console.log(JSON.stringify(moduleNodes, null, 2));
+  const remoteRepo = new RemoteRepo();
+  const moduleNodes = await remoteRepo.installModule('esv2011');
+  moduleNodes.forEach((moduleNode) => {
+    console.log(moduleNode);
+  });
 }
-demo();
 
-module.exports = {
-  InstallManager,
-};
+module.exports = RemoteRepo;

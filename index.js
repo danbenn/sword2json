@@ -1,11 +1,10 @@
-const installMgr = require('./src/installMgr');
-const VerseScheme = require('./src/VerseScheme');
-const VerseMetadata = require('./src/VerseMetadata');
+/**
+ * Entry point for NPM package.
+ */
+const SwordModule = require('./src/SwordModule');
 
-const sword = {
-  installMgr,
-  VerseMetadata,
-  VerseScheme,
+const sword2json = {
+  SwordModule,
 };
 
-module.exports = sword;
+module.exports = sword2json;

@@ -1,8 +1,11 @@
 const pako = require('pako');
 
+/**
+ * Converts blobs to XML.
+ */
 class BlobReader {
-  static getXMLforChapter(testamentBlob, positions, verses, encoding = 'CP1252') {
-    const chapter = verses[0].chapter;
+  static getXMLforChapter(testamentBlob, positions, verses, encoding) {
+    const { chapter } = verses[0];
     if (!positions[chapter - 1]) {
       throw new Error(`can't find chapter ${chapter} in this module`);
     }
@@ -15,7 +18,7 @@ class BlobReader {
     const blob = testamentBlob.slice(bookStartPos, chapterEndPos);
 
     const finalBlob = this.decompressBlob(blob);
-    console.log(Buffer.from(finalBlob).toString());
+    // console.log(Buffer.from(finalBlob).toString());
 
     const introText = this.getChapterIntro(finalBlob, startPos, positions, chapter, encoding);
     const renderedVerses = [];
