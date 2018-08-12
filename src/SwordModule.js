@@ -47,7 +47,7 @@ class SwordModule {
   static blobToBuffer(blob) {
     const buffer = new Buffer.alloc(blob.byteLength);
     const view = new Uint8Array(blob);
-    for (let i = 0; i < buffer.length; ++i) {
+    for (let i = 0; i < buffer.length; i += 1) {
       buffer[i] = view[i];
     }
     return buffer;
@@ -69,24 +69,7 @@ class SwordModule {
     }
     const chapterXML = BlobReader.getXMLforChapter(binaryBlob, bookChapterVersePosition,
       verseList, this.config.Encoding);
-    return chapterXML;
-    // this.config.SourceType, this.config.Direction, inOptions);
-  }
-
-  static getJsonFromXML(inRaw, inSource, inDirection, inOptions) {
-    // console.log(inRaw, inSource, inDirection, inOptions);
-    if (inSource && inSource.toLowerCase() === 'osis') {
-      return OsisParser.processText(inRaw, inDirection, inOptions);
-    }
-    if (inSource && inSource.toLowerCase() === 'thml') {
-      return ThmlParser.processText(inRaw, inDirection, inOptions);
-    }
-    return PlainParser.processText(inRaw, inDirection, inOptions);
-  }
-
-  // inOsis can be Matt.3
-  getVersesInChapter(inOsis) {
-    return VerseScheme.getVersesInChapter(VerseScheme.getBookNum(inOsis.split('.')[0], this.config.Versification), inOsis.split('.')[1], this.config.Versification);
+    return OsisParser.getJsonFromXML(chapterXML.verses, this.config.Direction);
   }
 }
 

@@ -89,7 +89,7 @@ class ModuleIndex {
   dumpBytes(inBuf) {
     start = 0;
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 4; i += 1) {
       this.getShortIntFromStream(inBuf);
       this.getInt48FromStream(inBuf);
       this.getShortIntFromStream(inBuf);

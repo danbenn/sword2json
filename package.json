@@ -22,7 +22,6 @@
     "blob": "0.0.4",
     "buffer": "^5.2.0",
     "eslint-config-airbnb": "^17.0.0",
-    "eslint-plugin-jsdoc": "^3.7.1",
     "eslint-plugin-jsx-a11y": "^6.1.1",
     "eslint-plugin-react": "^7.10.0",
     "events": "^3.0.0",

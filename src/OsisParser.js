@@ -35,7 +35,7 @@ let lastTag = '',
   isTitle = false,
   noteCount = 0;
 
-function processText(inRaw, inDirection, inOptions) {
+function getJsonFromXML(inRaw, inDirection, inOptions) {
   if (!inOptions || inOptions === {}) {
     inOptions = swFilterOptions;
   } else {
@@ -132,7 +132,7 @@ function processText(inRaw, inDirection, inOptions) {
           if (inDirection === 'RtoL') { outText += "<span dir='rtl'><div class='sword-intro'>"; } else { outText += "<span class='sword-intro'>"; }
         } else {
           if (inDirection === 'RtoL') { outText += `<span dir='rtl'><a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a></span><span dir='rtl'>`; } else { outText += `<a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a>`; }
-          jsonResult.push([`verse_num=${verseData.verseNum}`]);
+          jsonResult.push([`$verse_num=${verseData.verseNum}`]);
         }
         break;
       case 'note':
@@ -173,7 +173,7 @@ function processText(inRaw, inDirection, inOptions) {
         if (title.attributes.type === 'section') {
           outText = `${titleText}</h3>${outText}`;
         } else {
-          jsonResult.push([`heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
+          jsonResult.push([`$heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
           outText = `${titleText}</h1>${outText}`;
         }
         currentNode = null;
@@ -214,20 +214,18 @@ function processText(inRaw, inDirection, inOptions) {
   };
 
   let tmp = '';
-  for (let i = 0; i < inRaw.length; i++) {
-    // console.log(inRaw[i].text);
-    tmp = `<xml osisRef='${inRaw[i].osisRef}' verseNum = '${inRaw[i].verse}'>${inRaw[i].text}</xml>`;
+  for (let i = 0; i < inRaw.length; i += 1) {
+    tmp = `<xml verseNum = '${inRaw[i].verse}'>${inRaw[i].text}</xml>`;
     parser.write(tmp);
     parser.close();
     if (!inOptions.array) { renderedText += (inOptions.oneVersePerLine) ? `<div class='verse' id = '${inRaw[i].osisRef}'>${outText}</div>` : `<span class='verse' id = '${inRaw[i].osisRef}'>${outText}</span>`; } else { verseArray.push({ text: (inOptions.oneVersePerLine) ? `<div class='verse' id = '${inRaw[i].osisRef}'>${outText}</div>` : `<span class='verse' id = '${inRaw[i].osisRef}'>${outText}</span>`, osisRef: inRaw[i].osisRef }); }
     outText = '';
   }
 
-  console.log(jsonResult);
-
   if (inDirection === 'RtoL') { renderedText = `<div style='text-align: right;'>${renderedText}</div>`; }
-  if (!inOptions.array) { return { text: renderedText, footnotes: footnotesData }; }
-  return { verses: verseArray, footnotes: footnotesData, rtol: (inDirection === 'RtoL') };
+  // if (!inOptions.array) { return { text: renderedText, footnotes: footnotesData }; }
+  // return { verses: verseArray, footnotes: footnotesData, rtol: (inDirection === 'RtoL') };
+  return jsonResult;
 }
 
 /* FUNCTIONS TO PROCESS SPECIFIC OSIS TAGS */
@@ -293,7 +291,7 @@ function tagHi(node, t) {
 }
 
 const osis = {
-  processText,
+  getJsonFromXML,
 };
 
 // Return osis filter methods

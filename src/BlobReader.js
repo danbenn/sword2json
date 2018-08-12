@@ -26,7 +26,7 @@ class BlobReader {
     // Extract XML from each verse
     verses.forEach((verse) => {
       const verseXML = this.getXMLforVerse(verse, startPos, positions, finalBlob, encoding);
-      renderedVerses.push({ xml: verseXML, verseNum: verse.verse });
+      renderedVerses.push({ text: verseXML, verse: verse.verse });
     });
 
     return {

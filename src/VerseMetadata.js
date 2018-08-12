@@ -42,7 +42,7 @@ function parseVerseList(inVKey, inV11n) {
   } else if (isNaN(key.verse)) {
     var bookNum = versificationMgr.getBookNum(key.book);
     const verseMax = versificationMgr.getVersesInChapter(bookNum, key.chapter, inV11n);
-    for (let i = 0; i < verseMax; i++) {
+    for (let i = 0; i < verseMax; i += 1) {
       verseList.push({
         osis: `${key.book}.${key.chapter}.${i + 1}`, book: key.book, bookNum, chapter: key.chapter, verse: i + 1,
       });
