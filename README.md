@@ -13,26 +13,40 @@ These instructions will get you a copy of the project up and running on your loc
 You'll need to install Node.js ([here](https://nodejs.org/en/download/)) and NPM ([here](https://www.npmjs.com/get-npm)) on your system to use this project.
 
 ### Installing
-To use in your project, install via NPM:
+
+1. Find and download a Bible version you like from [__Crosswire__](https://www.crosswire.org/sword/modules/ModDisp.jsp?modType=Bibles).
+
+
+2. If you don't have an existing NPM project, you can set one up:
+```
+$ mkdir myBibleProject
+$ cd myBibleProject
+$ npm init
+```
+3. Install the package from NPM:
 ```
 $ npm install sword2json
 ```
-To access JSON from a specific verse or chapter:
+4. Access JSON from a specific chapter:
 ```
 const sword2json = require('sword2json');
 const fs = require('fs');
 
-const filename = './path/to/your/file/ESV2011.zip';
-const contents = fs.readFileSync(filename);
+const filePath = './path/to/your/file/SomeBibleVersion.zip';
+const contents = fs.readFileSync(filePath);
 const swordModule = SwordJS.SwordModule.fromNodeBuffer(contents);
 const jsonResult = swordModule.renderText('John 1');
 console.log(jsonResult);
 ```
-To set up a development environment, clone the repository:
+### Contributing
+
+1. To set up a development environment, clone the repository:
 ```
-$ git clone https://github.com/danbenn/sword2json.git && cd sword2json/
+$ git clone https://github.com/danbenn/sword2json.git
+$ cd sword2json/
+$ npm install
 ```
-Run the sample code to see JSON for John 1, from the English Standard Version (ESV):
+2. Run the sample code to see JSON for John 1. The ESV translation is included out of the box:
 
 ```
 $ node example.js
@@ -50,4 +64,5 @@ This project is licensed under the GPLv3 License.
 ## Acknowledgments
 This project would not have been possible without the support of the following people: 
 * David Instone-Brewer of Tyndale House
+* Kevin W.
 
