@@ -9,10 +9,10 @@ const jsonResult = [];
 
 //* SWFilter Options
 const swFilterOptions = {
-  headings: false,
-  footnotes: false,
-  crossReferences: false,
-  strongsNumbers: false,
+  headings: true,
+  footnotes: true,
+  crossReferences: true,
+  strongsNumbers: true,
   wordsOfChristInRed: false,
   oneVersePerLine: false,
   array: false,
