@@ -5,14 +5,13 @@ const sax = require('sax');
 
 const parser = sax.parser(true); // strict = true
 
-const jsonResult = [];
-
-//* SWFilter Options
+// Default filter options
 const swFilterOptions = {
   headings: true,
   footnotes: true,
-  crossReferences: true,
+  crossReferences: false,
   strongsNumbers: true,
+  indentation: true,
   wordsOfChristInRed: false,
   oneVersePerLine: false,
   array: false,
@@ -28,25 +27,19 @@ let lastTag = '',
   outText = '',
   renderedText = '',
   verseArray = [],
-  verseNumber = '',
   osisRef = '',
   footnotesData = {},
   isSelfClosing = false,
   isTitle = false,
   noteCount = 0;
 
-function getJsonFromXML(inRaw, inDirection, inOptions) {
-  if (!inOptions || inOptions === {}) {
-    inOptions = swFilterOptions;
-  } else {
-    inOptions.headings = (inOptions.headings) ? inOptions.headings : swFilterOptions.headings;
-    inOptions.footnotes = (inOptions.footnotes) ? inOptions.footnotes : swFilterOptions.footnotes;
-    inOptions.crossReferences = (inOptions.crossReferences) ? inOptions.crossReferences : swFilterOptions.crossReferences;
-    inOptions.strongsNumbers = (inOptions.strongsNumbers) ? inOptions.strongsNumbers : swFilterOptions.strongsNumbers;
-    inOptions.wordsOfChristInRed = (inOptions.wordsOfChristInRed) ? inOptions.wordsOfChristInRed : swFilterOptions.wordsOfChristInRed;
-    inOptions.oneVersePerLine = (inOptions.oneVersePerLine) ? inOptions.oneVersePerLine : swFilterOptions.oneVersePerLine;
-    inOptions.array = (inOptions.array) ? inOptions.array : swFilterOptions.array;
+function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=false) {
+  if (!filterOptions || filterOptions === {}) {
+    filterOptions = swFilterOptions;
   }
+
+  let verse = [];
+  const JsonResult = {};
 
   lastTag = '';
   currentNode = null;
@@ -60,11 +53,11 @@ function getJsonFromXML(inRaw, inDirection, inOptions) {
   outText = '';
   renderedText = '';
   verseArray = [];
-  verseNumber = '';
   osisRef = '';
   footnotesData = {};
   isTitle = false;
   noteCount = 0;
+
 
   // Handle Parsing errors
   parser.onerror = function (e) {
@@ -74,49 +67,51 @@ function getJsonFromXML(inRaw, inDirection, inOptions) {
   // Text node
   parser.ontext = function (t) {
     if (currentNote) {
-      outText += processFootnotes(t, inOptions);
+      processFootnotes(t, filterOptions);
     } else if (quote) {
-      if (quote.attributes.who === 'Jesus' && inOptions.wordsOfChristInRed && t) {
-        const lastItem = jsonResult[jsonResult.length - 1][0];
-        if (lastItem.includes('wordsOfChrist')) {
-          jsonResult[jsonResult.length - 1][0] += t;
-        } else {
-          jsonResult.push([`wordsOfChrist=${t}`]);
+      const strongsNumbers = getStrongsNumbers();
+      if (quote.attributes.who === 'Jesus' && filterOptions.wordsOfChristInRed && t) {
+          verse.push([`$redLetter=${t}`]);
+          return;
         }
-        outText += `<span style='color: red'><span class='sword-woc'>${t} </span></span>`;
-      } else { outText += t; }
+      verse.push([t]);
+      if (strongsNumbers) {
+        verse[verse.length - 1].push(strongsNumbers);
+      }
     } else if (currentNode) {
       switch (currentNode.name) {
         case 'title':
-          if (inOptions.headings) {
+          if (filterOptions.headings) {
             titleText += t;
           }
           break;
         case 'divineName':
-          if (title && inOptions.headings) {
+          if (title && filterOptions.headings) {
             const strongsNumbers = getStrongsNumbers();
-            jsonResult.push([t, strongsNumbers]);
+            verse.push([t, strongsNumbers]);
             titleText += `<span class='sword-divine-name'>${t}</span>`;
           }
           break;
         case 'hi':
           if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
             const strongsNumbers = getStrongsNumbers();
-            jsonResult.push([t, strongsNumbers]);
+            verse.push([t, strongsNumbers]);
+          } else {
+            verse.push([t]);
           }
-          outText += tagHi(currentNode, t);
           break;
         default:
           if ('attributes' in currentNode && 'lemma' in currentNode.attributes) {
             const strongsNumbers = getStrongsNumbers();
-            jsonResult.push([t, strongsNumbers]);
+            verse.push([t, strongsNumbers]);
+            break;
           }
+          verse.push([t]);
           outText += t;
           break;
       }
     } else {
-      jsonResult.push([t]);
-      outText += t;
+      verse.push([t]);
     }
   };
 
@@ -126,54 +121,69 @@ function getJsonFromXML(inRaw, inDirection, inOptions) {
     currentNode = node;
     lastTag = node.name;
     switch (node.name) {
-      case 'xml':
+      case 'xml': // enclosing tag of entire body of content
         verseData = { osisRef: node.attributes.osisRef, verseNum: node.attributes.verseNum };
         if (parseInt(verseData.verseNum, 10) === 0) {
-          if (inDirection === 'RtoL') { outText += "<span dir='rtl'><div class='sword-intro'>"; } else { outText += "<span class='sword-intro'>"; }
+          if (inDirection === 'RtoL') {
+            outText += "<span dir='rtl'><div class='sword-intro'>";
+          } else {
+            outText += "<span class='sword-intro'>";
+          }
         } else {
           if (inDirection === 'RtoL') { outText += `<span dir='rtl'><a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a></span><span dir='rtl'>`; } else { outText += `<a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a>`; }
-          jsonResult.push([`$verse_num=${verseData.verseNum}`]);
         }
         break;
-      case 'note':
-        if (node.attributes.type === 'crossReference' && inOptions.crossReferences) { outText += "<span class='sword-cross-reference'>["; } else if (inOptions.footnotes && node.attributes.type !== 'crossReference') {
+      case 'note': // footnote or cross-reference object
+        if (node.attributes.type === 'crossReference' && filterOptions.crossReferences) {
+          verse.push([`$crossref`])
+        } else if (filterOptions.footnotes && node.attributes.type !== 'crossReference') {
           osisRef = node.attributes.osisRef || node.attributes.annotateRef || verseData.osisRef;
           if (!node.attributes.n) noteCount++;
           const n = node.attributes.n || noteCount;
-          jsonResult.push([`crossref=${osisRef}&${n}`]);
-          outText += `<a class='sword-footnote' href="?type=footnote&osisRef=${osisRef}&n=${n}"><sup>` + `*n${n}</sup></a>`;
+          verse.push([`$note=${n}&osisRef=${osisRef}`]);
         }
-
         currentNote = node;
         break;
-      case 'reference':
+      case 'reference': // cross-reference element
         currentRef = node;
         break;
-      case 'q':
-        if (!node.isSelfClosing && node.attributes.who === 'Jesus') { quote = node; }
-        break;
-      case 'title':
+      case 'title': // section heading
         title = node;
         if (title.attributes.type === 'section') { titleText += '<h3>'; } else { titleText += '<h1>'; }
         break;
-      case 'div':
-        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.sID) { outText += '<p>'; }
-        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.eID) { outText += '</p>'; }
+      case 'div': // paragraph
+        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.sID) {
+          outText += '<p>';
+        }
+        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.eID) {
+          outText += '</p>';
+        }
         break;
-      case 'l':
-        if (node.isSelfClosing && node.attributes.type === 'x-br') { outText += '<br>'; }
+      case 'l': // line indentation
+        if (filterOptions.indentation) {
+          if (node.attributes.level === "1" && node.attributes.sID)  {
+            verse.push(['$line-break']);
+            verse.push(['$small-indent']);
+          }
+          else if (node.attributes.level === "2" && node.attributes.sID) {
+            verse.push(['$line-break']);
+            verse.push(['$large-indent']);
+          }
+        }
+        if (node.isSelfClosing && node.attributes.type === 'x-br') {
+          verse.push(['<br>']);
+        }
         break;
     }
   };
 
   parser.onclosetag = function (tagName) {
-    // console.log("CLOSE:", tagName);
     switch (tagName) {
       case 'title':
         if (title.attributes.type === 'section') {
           outText = `${titleText}</h3>${outText}`;
         } else {
-          jsonResult.push([`$heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
+          verse.push([`$heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
           outText = `${titleText}</h1>${outText}`;
         }
         currentNode = null;
@@ -181,7 +191,6 @@ function getJsonFromXML(inRaw, inDirection, inOptions) {
         titleText = '';
         break;
       case 'note':
-        if (currentNote.attributes.type === 'crossReference' && inOptions.crossReferences) { outText += ']</span> '; }
         noteText = '';
         currentNote = null;
         break;
@@ -189,70 +198,144 @@ function getJsonFromXML(inRaw, inDirection, inOptions) {
         currentRef = null;
         break;
       case 'q':
-        if (!currentNode && inOptions.wordsOfChristInRed) {
-          // outText += "</span>";
+        const isClosingQuotationMark = currentNode && currentNode.isSelfClosing
+          && currentNode.attributes.marker;
+        if (isClosingQuotationMark) {
+          // Add closing quote mark
+          verse.push([currentNode.attributes.marker]);
+        }
+        if (!currentNode) {
           quote = null;
         }
         break;
-      case 'xml':
-        if (parseInt(verseData.verseNum, 10) === 0) { outText += '</div>'; }
-        if (inDirection === 'RtoL') { outText += '</span>'; }
+      case 'lg': // 'line group' (paragraph)
+        verse.push(['$paragraph-break']);
         break;
     }
     lastTag = '';
     currentNode = null;
   };
 
-  // Handling Attributes
-  parser.onattribute = function (attr) {
-    // console.log(attr);
-  };
+  const verses = [];
+  rawXML.forEach((verseXML) => {
+    const verseNum = verseXML.verse;
+    const verseText = verseXML.text;
+    const verseXml = `<xml verseNum = '${verseNum}'>${verseText}</xml>`;
 
-  // End of parsing
-  parser.onend = function () {
-    // console.log("Finished parsing XML!");
-  };
+    if (debugOutputEnabled) {
+      var prettifyXML = require('xml-formatter');
+      console.log(prettifyXML(verseXml));
+      console.log('*****************************************************');
+    }
 
-  let tmp = '';
-  for (let i = 0; i < inRaw.length; i += 1) {
-    tmp = `<xml verseNum = '${inRaw[i].verse}'>${inRaw[i].text}</xml>`;
-    parser.write(tmp);
+    parser.write(verseXml);
     parser.close();
-    if (!inOptions.array) { renderedText += (inOptions.oneVersePerLine) ? `<div class='verse' id = '${inRaw[i].osisRef}'>${outText}</div>` : `<span class='verse' id = '${inRaw[i].osisRef}'>${outText}</span>`; } else { verseArray.push({ text: (inOptions.oneVersePerLine) ? `<div class='verse' id = '${inRaw[i].osisRef}'>${outText}</div>` : `<span class='verse' id = '${inRaw[i].osisRef}'>${outText}</span>`, osisRef: inRaw[i].osisRef }); }
-    outText = '';
+    verses.push({
+      verseNum,
+      content: verse,
+    });
+    verse = [];
+  })
+
+  if (debugOutputEnabled) {
+    // Print all verses, with formatting, in the terminal
+    let chapterText = '';
+    verses.forEach((verse) => {
+      chapterText += renderVerseAsFormattedText(verse);
+    })
+    console.log(chapterText);
   }
 
-  if (inDirection === 'RtoL') { renderedText = `<div style='text-align: right;'>${renderedText}</div>`; }
-  // if (!inOptions.array) { return { text: renderedText, footnotes: footnotesData }; }
-  // return { verses: verseArray, footnotes: footnotesData, rtol: (inDirection === 'RtoL') };
-  return jsonResult;
+  return verses;
 }
 
-/* FUNCTIONS TO PROCESS SPECIFIC OSIS TAGS */
+/**
+ * Render verse without any metadata or formatting information:
+ * ['in the beginning, ', ['G1039']], ['God', ['G4932']] ==>
+ * 'In the beginning, God'
+ */
+function renderVerseAsPlainText(verse) {
+  let plaintext = '';
+  verse.content.forEach((verseBit) => {
+    if (!verseBit[0].includes('$')) {
+      plaintext += verseBit[0];
+    }
+  });
+  // Remote duplicate whitespace
+  plaintext = plaintext.replace(/\s+/g,' ');
+  plaintext += ' ';
+  return plaintext;
+}
+
+/**
+ * Render verse with formatting information. This includes:
+ * • Tabs
+ * • Indentation
+ * • Section headings
+ */
+function renderVerseAsFormattedText(verse) {
+  let formattedText = '';
+  verse.content.forEach((verseBit) => {
+    if (verseBit[0].includes('$heading')) {
+      formattedText += '\n\n';
+      formattedText += verseBit[0].replace('$heading=', '');
+      formattedText += '\n\n';
+    }
+    else if (verseBit[0].includes('$line-break')) {
+      formattedText += '\n';
+    }
+    else if (verseBit[0].includes('$small-indent')) {
+      formattedText += '\t';
+    }
+    else if (verseBit[0].includes('$large-indent')) {
+      formattedText += '\t\t';
+    }
+    else if (verseBit[0].includes('$paragraph-break')) {
+      formattedText += '\n';
+    }
+    else if (!verseBit[0].includes('$')) {
+      formattedText += verseBit[0];
+    }
+  });
+  // Remote duplicate whitespace
+  // formattedText = formattedText.replace(/\s+/g,' ');
+  formattedText += ' ';
+  return formattedText;
+}
 
 function getStrongsNumbers() {
+  if (!currentNode) {
+    return null;
+  }
   const strongsNumbersString = currentNode.attributes.lemma.replace(' ', '');
   const strongsNumbers = strongsNumbersString.split('strong:');
   strongsNumbers.shift();
   return strongsNumbers;
 }
 
-function processFootnotes(t, inOptions) {
+function processFootnotes(t, filterOptions) {
   let out = '';
-  if (currentNote.attributes.type === 'crossReference' && inOptions.crossReferences) {
-    if (lastTag !== 'reference') { out += processCrossReference(t); } else {
+  if (currentNote.attributes.type === 'crossReference' && filterOptions.crossReferences) {
+    if (lastTag !== 'reference') {
+      out += processCrossReference(t);
+    } else {
       const crossRef = (currentRef) ? currentRef.attributes.osisRef : currentNote.attributes.osisRef;
       out += `<a href="?type=crossReference&osisRef=${crossRef}&n=${currentNote.attributes.n}">${t}</a>`;
     }
-  } else if (inOptions.footnotes && currentNote.attributes.type !== 'crossReference') {
-    if (lastTag === 'hi') {
-      t = tagHi(currentNode, t);
-    }
+  } else if (filterOptions.footnotes && currentNote.attributes.type !== 'crossReference') {
     osisRef = currentNote.attributes.osisRef || currentNote.attributes.annotateRef || verseData.osisRef;
     const n = currentNote.attributes.n || noteCount;
-    if (!footnotesData.hasOwnProperty(osisRef)) { footnotesData[osisRef] = [{ note: t, n }]; } else if (footnotesData[osisRef][footnotesData[osisRef].length - 1].n === n) { footnotesData[osisRef][footnotesData[osisRef].length - 1].note += t; } else { footnotesData[osisRef].push({ note: t, n }); }
+    if (!footnotesData.hasOwnProperty(osisRef)) {
+      footnotesData[osisRef] = [{ note: t, n }];
+    }
+    else if (footnotesData[osisRef][footnotesData[osisRef].length - 1].n === n) {
+      footnotesData[osisRef][footnotesData[osisRef].length - 1].note += t;
+    }
+    else {
+      footnotesData[osisRef].push({ note: t, n });
+    }
   }
-  return out;
+  return footnotesData;
 }
 
 function processCrossReference(inText) {
@@ -261,33 +344,10 @@ function processCrossReference(inText) {
   if (osisRef !== '' && currentRef) {
     const n = currentRef.attributes.n || currentNote.attributes.n;
     out += `<a href="?type=crossReference&osisRef=${osisRef}&n=${n}">${inText}</a>`;
-  } else { out += inText; }
-  return out;
-}
-
-function tagHi(node, t) {
-  switch (node.attributes.type) {
-    case 'italic':
-      t = `<i>${t}</i>`;
-      break;
-    case 'bold':
-      t = `<b>${t}</b>`;
-      break;
-    case 'line-through':
-      t = `<s>${t}</s>`;
-      break;
-    case 'underline':
-      t = `<u>${t}</u>`;
-      break;
-    case 'sub':
-      t = `<sub>${t}</sub>`;
-      break;
-    case 'super':
-      t = `<sup>${t}</sup>`;
-      break;
+  } else {
+    out += inText;
   }
-
-  return t;
+  return out;
 }
 
 const osis = {
