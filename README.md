@@ -54,6 +54,10 @@ $ npm install
 $ node example.js
 ```
 
+### Getting Help
+
+Stuck? Click on the `chat on gitter` badge at the top of this README to ask for help!
+
 ## Authors
 
 * **Dan Bennett** - *Refactoring and JSON filter* - [Github](https://github.com/PurpleBooth)
