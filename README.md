@@ -1,5 +1,7 @@
 # sword2json
 
+[![Join the chat at https://gitter.im/sword2json/Lobby](https://badges.gitter.im/sword2json/Lobby.svg)](https://gitter.im/sword2json/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ```sword2json``` is a pure Javascript library to read Bible modules from [Crosswire Bible Society](http://crosswire.org/sword).
 
 __WARNING__: this code is in alpha, and still under active development.
