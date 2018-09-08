@@ -33,7 +33,7 @@ let lastTag = '',
   isTitle = false,
   noteCount = 0;
 
-function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=false) {
+function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled = true) {
   if (!filterOptions || filterOptions === {}) {
     filterOptions = swFilterOptions;
   }
@@ -71,9 +71,9 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
     } else if (quote) {
       const strongsNumbers = getStrongsNumbers();
       if (quote.attributes.who === 'Jesus' && filterOptions.wordsOfChristInRed && t) {
-          verse.push([`$redLetter=${t}`]);
-          return;
-        }
+        verse.push([`$redLetter=${t}`]);
+        return;
+      }
       verse.push([t]);
       if (strongsNumbers) {
         verse[verse.length - 1].push(strongsNumbers);
@@ -89,7 +89,6 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
           if (title && filterOptions.headings) {
             const strongsNumbers = getStrongsNumbers();
             verse.push([t, strongsNumbers]);
-            titleText += `<span class='sword-divine-name'>${t}</span>`;
           }
           break;
         case 'hi':
@@ -123,19 +122,10 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
     switch (node.name) {
       case 'xml': // enclosing tag of entire body of content
         verseData = { osisRef: node.attributes.osisRef, verseNum: node.attributes.verseNum };
-        if (parseInt(verseData.verseNum, 10) === 0) {
-          if (inDirection === 'RtoL') {
-            outText += "<span dir='rtl'><div class='sword-intro'>";
-          } else {
-            outText += "<span class='sword-intro'>";
-          }
-        } else {
-          if (inDirection === 'RtoL') { outText += `<span dir='rtl'><a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a></span><span dir='rtl'>`; } else { outText += `<a href="?type=verseNum&osisRef=${verseData.osisRef}" class='verse-number'> ${verseData.verseNum} </a>`; }
-        }
         break;
       case 'note': // footnote or cross-reference object
         if (node.attributes.type === 'crossReference' && filterOptions.crossReferences) {
-          verse.push([`$crossref`])
+          verse.push(['$crossref']);
         } else if (filterOptions.footnotes && node.attributes.type !== 'crossReference') {
           osisRef = node.attributes.osisRef || node.attributes.annotateRef || verseData.osisRef;
           if (!node.attributes.n) noteCount++;
@@ -149,29 +139,16 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
         break;
       case 'title': // section heading
         title = node;
-        if (title.attributes.type === 'section') { titleText += '<h3>'; } else { titleText += '<h1>'; }
-        break;
-      case 'div': // paragraph
-        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.sID) {
-          outText += '<p>';
-        }
-        if (node.isSelfClosing && node.attributes.type === 'paragraph' && node.attributes.eID) {
-          outText += '</p>';
-        }
         break;
       case 'l': // line indentation
         if (filterOptions.indentation) {
-          if (node.attributes.level === "1" && node.attributes.sID)  {
+          if (node.attributes.level === '1' && node.attributes.sID) {
             verse.push(['$line-break']);
             verse.push(['$small-indent']);
-          }
-          else if (node.attributes.level === "2" && node.attributes.sID) {
+          } else if (node.attributes.level === '2' && node.attributes.sID) {
             verse.push(['$line-break']);
             verse.push(['$large-indent']);
           }
-        }
-        if (node.isSelfClosing && node.attributes.type === 'x-br') {
-          verse.push(['<br>']);
         }
         break;
     }
@@ -180,12 +157,7 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
   parser.onclosetag = function (tagName) {
     switch (tagName) {
       case 'title':
-        if (title.attributes.type === 'section') {
-          outText = `${titleText}</h3>${outText}`;
-        } else {
-          verse.push([`$heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
-          outText = `${titleText}</h1>${outText}`;
-        }
+        verse.push([`$heading=${titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
         currentNode = null;
         title = null;
         titleText = '';
@@ -221,9 +193,8 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
     const verseNum = verseXML.verse;
     const verseText = verseXML.text;
     const verseXml = `<xml verseNum = '${verseNum}'>${verseText}</xml>`;
-
     if (debugOutputEnabled) {
-      var prettifyXML = require('xml-formatter');
+      const prettifyXML = require('xml-formatter');
       console.log(prettifyXML(verseXml));
       console.log('*****************************************************');
     }
@@ -235,14 +206,14 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled=f
       content: verse,
     });
     verse = [];
-  })
+  });
 
   if (debugOutputEnabled) {
     // Print all verses, with formatting, in the terminal
     let chapterText = '';
     verses.forEach((verse) => {
       chapterText += renderVerseAsFormattedText(verse);
-    })
+    });
     console.log(chapterText);
   }
 
@@ -262,7 +233,7 @@ function renderVerseAsPlainText(verse) {
     }
   });
   // Remote duplicate whitespace
-  plaintext = plaintext.replace(/\s+/g,' ');
+  plaintext = plaintext.replace(/\s+/g, ' ');
   plaintext += ' ';
   return plaintext;
 }
@@ -280,20 +251,15 @@ function renderVerseAsFormattedText(verse) {
       formattedText += '\n\n';
       formattedText += verseBit[0].replace('$heading=', '');
       formattedText += '\n\n';
-    }
-    else if (verseBit[0].includes('$line-break')) {
+    } else if (verseBit[0].includes('$line-break')) {
       formattedText += '\n';
-    }
-    else if (verseBit[0].includes('$small-indent')) {
+    } else if (verseBit[0].includes('$small-indent')) {
       formattedText += '\t';
-    }
-    else if (verseBit[0].includes('$large-indent')) {
+    } else if (verseBit[0].includes('$large-indent')) {
       formattedText += '\t\t';
-    }
-    else if (verseBit[0].includes('$paragraph-break')) {
+    } else if (verseBit[0].includes('$paragraph-break')) {
       formattedText += '\n';
-    }
-    else if (!verseBit[0].includes('$')) {
+    } else if (!verseBit[0].includes('$')) {
       formattedText += verseBit[0];
     }
   });
@@ -327,11 +293,9 @@ function processFootnotes(t, filterOptions) {
     const n = currentNote.attributes.n || noteCount;
     if (!footnotesData.hasOwnProperty(osisRef)) {
       footnotesData[osisRef] = [{ note: t, n }];
-    }
-    else if (footnotesData[osisRef][footnotesData[osisRef].length - 1].n === n) {
+    } else if (footnotesData[osisRef][footnotesData[osisRef].length - 1].n === n) {
       footnotesData[osisRef][footnotesData[osisRef].length - 1].note += t;
-    }
-    else {
+    } else {
       footnotesData[osisRef].push({ note: t, n });
     }
   }
