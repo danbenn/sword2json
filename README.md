@@ -6,6 +6,16 @@
 
 __WARNING__: this code is in alpha, and still under active development.
 
+## Motivation
+
+Sword is the most widely used data format for making Bible apps and websites. 
+
+The  originally developed in the late 90s by [Crosswire Bible Society](http://crosswire.org/sword).
+
+There are two official libraries for reading Sword modules: Java and C++. Neither are particularly friendly to newcomers, and lack good documentation. 
+
+`sword2json` was created as a modern, delightful solution for building Bible apps and websites using pure Javascript.
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
