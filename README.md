@@ -22,7 +22,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You'll need to install Node.js ([here](https://nodejs.org/en/download/)) and NPM ([here](https://www.npmjs.com/get-npm)) on your system to use this project.
+You'll need to install Node.js ([here](https://nodejs.org/en/download/)) on your system to use this project.
 
 ### Installing
 
