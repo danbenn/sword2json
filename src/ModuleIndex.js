@@ -1,4 +1,5 @@
 const VerseScheme = require('./VerseScheme');
+const ModuleConfig = require('./ModuleConfig');
 
 let start = 0;
 let buf = null;
@@ -45,6 +46,28 @@ class ModuleIndex {
     this.config = config;
   }
 
+  /**
+   * Initialize from a Node.js buffer.
+   * @param {Buffer} buffer - contents of a single .zip file
+   * @returns {ModuleIndex} - module built with given files
+   */
+  static fromNodeBuffer(buffer) {
+    const JSZip = require('jszip');
+    const zip = new JSZip(buffer);
+    const filenames = Object.keys(zip.files);
+    const files = {};
+    let moduleConfigFile = null;
+    filenames.forEach((name) => {
+      files[name] = zip.files[name].asUint8Array();
+      if (name.includes('.conf')) {
+        moduleConfigFile = files[name];
+      }
+    });
+    const configBuffer = this.blobToBuffer(moduleConfigFile);
+    const configString = configBuffer.toString();
+    const moduleConfig = new ModuleConfig(configString);
+    return new ModuleIndex(files, moduleConfig);
+  }
 
   static blobToBuffer(blob) {
     const buffer = new Buffer.alloc(blob.byteLength);

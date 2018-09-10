@@ -1,16 +1,18 @@
 /**
  * This code sample uses Node.js.
  *
- * Other platforms coming soon!
+ * Try running it by typing 'node example.js' in your terminal.
  */
 const fs = require('fs');
-const sword2json = require('./index');
+const { SwordModule, ModuleIndex } = require('./index');
 // Use included sample file from the repository
 const filename = './data/ESV2011.zip';
 // Load the file into a Node.js Buffer
 const contents = fs.readFileSync(filename);
-// Create Sword Module object from Buffer
-const swordModule = sword2json.SwordModule.fromNodeBuffer(contents);
+// Create an index of files relevant to the module
+const fileIndex = ModuleIndex.fromNodeBuffer(contents);
+// Construct a SwordModule object for accessing those files
+const swordModule = new SwordModule(fileIndex);
 // Render the result, including formatting information
 const jsonResult = swordModule.renderText('Psa 1', {});
 // Print the result to your terminal :)

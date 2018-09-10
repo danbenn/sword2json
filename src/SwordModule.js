@@ -2,7 +2,6 @@ const verseKey = require('./VerseMetadata');
 const BlobReader = require('./BlobReader');
 const VerseScheme = require('./VerseScheme');
 const OsisParser = require('./OsisParser');
-const ModuleConfig = require('./ModuleConfig');
 const ModuleIndex = require('./ModuleIndex');
 
 /**
@@ -18,30 +17,6 @@ class SwordModule {
     this.binaryOT = index.binaryOT;
     this.binaryNT = index.binaryNT;
     this.config = index.config;
-  }
-
-  /**
-   * Initialize from a Node.js buffer.
-   * @param {Buffer} buffer - contents of a single .zip file
-   * @returns {SwordModule} - module built with given files
-   */
-  static fromNodeBuffer(buffer) {
-    const JSZip = require('jszip');
-    const zip = new JSZip(buffer);
-    const filenames = Object.keys(zip.files);
-    const files = {};
-    let moduleConfigFile = null;
-    filenames.forEach((name) => {
-      files[name] = zip.files[name].asUint8Array();
-      if (name.includes('.conf')) {
-        moduleConfigFile = files[name];
-      }
-    });
-    const configBuffer = this.blobToBuffer(moduleConfigFile);
-    const configString = configBuffer.toString();
-    const moduleConfig = new ModuleConfig(configString);
-    const index = new ModuleIndex(files, moduleConfig);
-    return new SwordModule(index);
   }
 
   static blobToBuffer(blob) {

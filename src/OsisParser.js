@@ -33,7 +33,7 @@ let lastTag = '',
   isTitle = false,
   noteCount = 0;
 
-function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled = true) {
+function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled = false) {
   if (!filterOptions || filterOptions === {}) {
     filterOptions = swFilterOptions;
   }
