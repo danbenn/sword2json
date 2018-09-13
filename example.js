@@ -10,10 +10,22 @@ const filename = './data/ESV2011.zip';
 // Load the file into a Node.js Buffer
 const contents = fs.readFileSync(filename);
 // Create an index of files relevant to the module
-const fileIndex = ModuleIndex.fromNodeBuffer(contents);
+let fileIndex = ModuleIndex.fromNodeBuffer(contents);
+
+// [optional] To save and restore from JSON, uncomment this!
+/*
+const json = fileIndex.serializeAsJson();
+const str = JSON.stringify(json);
+fs.writeFileSync('esvFiles.json', str, 'utf8');
+const stringFromFile = fs.readFileSync('esvFiles.json', 'utf8');
+const jsonFromFile = JSON.parse(stringFromFile);
+fileIndex = ModuleIndex.fromSerializedJson(jsonFromFile);
+*/
+
 // Construct a SwordModule object for accessing those files
 const swordModule = new SwordModule(fileIndex);
 // Render the result, including formatting information
 const jsonResult = swordModule.renderText('Psa 1', {});
 // Print the result to your terminal :)
 console.log(JSON.stringify(jsonResult));
+

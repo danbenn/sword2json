@@ -1,5 +1,6 @@
 const VerseScheme = require('./VerseScheme');
 const ModuleConfig = require('./ModuleConfig');
+const base64 = require('base64-js');
 
 let start = 0;
 let buf = null;
@@ -68,6 +69,27 @@ class ModuleIndex {
     const moduleConfig = new ModuleConfig(configString);
     return new ModuleIndex(files, moduleConfig);
   }
+
+  serializeAsJson() {
+    return {
+      rawPosOT: this.rawPosOT,
+      rawPosNT: this.rawPosNT,
+      binaryOT: base64.fromByteArray(this.binaryOT),
+      binaryNT: base64.fromByteArray(this.binaryNT),
+      config: this.config,
+    }
+  }
+
+  static fromSerializedJson(json) {
+    return {
+      rawPosOT: json.rawPosOT,
+      rawPosNT: json.rawPosNT,
+      binaryOT: base64.toByteArray(json.binaryOT),
+      binaryNT: base64.toByteArray(json.binaryNT),
+      config: json.config,
+    }
+  }
+
 
   static blobToBuffer(blob) {
     const buffer = new Buffer.alloc(blob.byteLength);
