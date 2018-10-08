@@ -190,8 +190,9 @@ function getJsonFromXML(rawXML: types.ChapterXML, debugOutputEnabled = false) {
     const verseText = verseXML.text;
     const verseXml = `<xml verseNum = '${verseNum}'>${verseText}</xml>`;
     if (debugOutputEnabled) {
-      const prettifyXML = require('xml-formatter');
-      console.log(prettifyXML(verseXml));
+      // If developing, feel free to comment this out to format XML better.
+      // const prettifyXML = require('xml-formatter');
+      // console.log(prettifyXML(verseXml));
       console.log('*****************************************************');
     }
 
