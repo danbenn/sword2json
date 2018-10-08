@@ -1,6 +1,6 @@
 {
   "name": "sword2json",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "a JSON interface for Sword Bible modules",
   "main": "dist/index.js",
   "repository": {
@@ -9,6 +9,7 @@
   },
   "author": "danbennett <danielbennett@gmx.com>",
   "license": "MIT",
+  "files": ["dist/*"],
   "dependencies": {
     "base64-js": "^1.3.0",
     "bible-passage-reference-parser": "^2.0.1",

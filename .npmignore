@@ -1,0 +1,4 @@
+.vscode
+*.db
+*.zip
+yarn-error.log
