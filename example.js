@@ -2,30 +2,22 @@
  * This code sample uses Node.js.
  *
  * Try running it by typing 'node example.js' in your terminal.
+ *
+ * Need a database? Or want to send JSON through an API? Sweet! Check out
+ * the test suite in the 'tests' folder for example usage.
  */
 const fs = require('fs');
-const { SwordModule, ModuleIndex } = require('./index');
+// Import from 'dist', which is Typescript compiled to ES3 (vanilla) Javascript
+const { SwordModule, ModuleIndex, NodeDatabase, VerseMetadata } = require('./dist/index');
 // Use included sample file from the repository
 const filename = './data/ESV2011.zip';
 // Load the file into a Node.js Buffer
 const contents = fs.readFileSync(filename);
 // Create an index of files relevant to the module
-let fileIndex = ModuleIndex.fromNodeBuffer(contents);
-
-// [optional] To save and restore from JSON, uncomment this!
-/*
-const json = fileIndex.serializeAsJson();
-const str = JSON.stringify(json);
-fs.writeFileSync('esvFiles.json', str, 'utf8');
-const stringFromFile = fs.readFileSync('esvFiles.json', 'utf8');
-const jsonFromFile = JSON.parse(stringFromFile);
-fileIndex = ModuleIndex.fromSerializedJson(jsonFromFile);
-*/
-
+const fileIndex = ModuleIndex.fromNodeBuffer(contents);
 // Construct a SwordModule object for accessing those files
 const swordModule = new SwordModule(fileIndex);
-// Render the result, including formatting information
-const jsonResult = swordModule.renderText('Psa 1', {});
-// Print the result to your terminal :)
-console.log(JSON.stringify(jsonResult));
-
+// [optional] Load Sword module contents into a sqlite database
+const jsonResult = swordModule.getJSON('Psa 1');
+// Print the result in your terminal :)
+console.log(JSON.stringify(jsonResult, null, 2));

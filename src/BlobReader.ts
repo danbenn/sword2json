@@ -1,10 +1,15 @@
 const pako = require('pako');
 
+import * as types from './types';
+
 /**
  * Converts blobs to XML.
  */
-class BlobReader {
-  static getXMLforChapter(testamentBlob, positions, verses, encoding) {
+export default class BlobReader {
+  static getXMLforChapter(testamentBlob: Uint8Array,
+                          positions: types.ChapterPosition[],
+                          verses: types.VerseMetadata[],
+                          encoding: string): types.ChapterXML {
     const { chapter } = verses[0];
     if (!positions[chapter - 1]) {
       throw new Error(`can't find chapter ${chapter} in this module`);
@@ -20,28 +25,35 @@ class BlobReader {
     const finalBlob = this.decompressBlob(blob);
     // console.log(Buffer.from(finalBlob).toString());
 
-    const introText = this.getChapterIntro(finalBlob, startPos, positions, chapter, encoding);
-    const renderedVerses = [];
+    const introText: string = this.getChapterIntro(
+      finalBlob, startPos, positions, chapter, encoding);
+    const renderedVerses: types.VerseXML[] = [];
 
     // Extract XML from each verse
-    verses.forEach((verse) => {
-      const verseXML = this.getXMLforVerse(verse, startPos, positions, finalBlob, encoding);
+    verses.forEach((verse: types.VerseMetadata) => {
+      const verseXML: string = this.getXMLforVerse(verse, startPos, positions,
+                                                   finalBlob, encoding);
       renderedVerses.push({ text: verseXML, verse: verse.verse });
     });
 
-    return {
-      intro: introText,
-      verses: renderedVerses,
+    const chapterXML: types.ChapterXML = {
+      intro: introText, verses: renderedVerses,
     };
+
+    return chapterXML;
   }
 
-  static getXMLforVerse(verse, startPos, positions, blob, encoding) {
+  static getXMLforVerse(verse: types.VerseMetadata, startPos: number,
+                        positions: types.ChapterPosition[], blob: Uint8Array,
+                        encoding: string) {
     const verseStart = startPos + positions[verse.chapter - 1].verses[verse.verse - 1].startPos;
     const verseEnd = verseStart + positions[verse.chapter - 1].verses[verse.verse - 1].length;
     return this.blobToString(blob.slice(verseStart, verseEnd), encoding);
   }
 
-  static getChapterIntro(blob, startPos, positions, chapter, encoding) {
+  static getChapterIntro(blob: Uint8Array, startPos: number,
+                         positions: types.ChapterPosition[],
+                         chapter: number, encoding: string) {
     let verseStart = 0;
     const verseEnd = startPos;
     if (chapter !== 1) {
@@ -49,14 +61,14 @@ class BlobReader {
     }
     const introBlob = blob.slice(verseStart, verseEnd);
     const introText = this.blobToString(introBlob, encoding);
-    return { text: introText, verseNum: 0 };
+    return introText;
   }
 
-  static blobToString(blob, encoding) {
+  static blobToString(blob: Uint8Array, encoding: string) {
     return Buffer.from(blob).toString(encoding);
   }
 
-  static decompressBlob(blob) {
+  static decompressBlob(blob: Uint8Array) {
     const inflator = new pako.Inflate();
     const array = new Uint8Array(blob);
     inflator.push(array, true);
@@ -67,5 +79,3 @@ class BlobReader {
     return decompressedBlob;
   }
 }
-
-module.exports = BlobReader;

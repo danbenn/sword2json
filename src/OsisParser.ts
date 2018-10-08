@@ -1,12 +1,12 @@
 const BcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
+import * as types from './types';
 
 const bcv = new BcvParser();
 const sax = require('sax');
 
 const parser = sax.parser(true); // strict = true
 
-// Default filter options
-const swFilterOptions = {
+const defaultFilterOptions = {
   headings: true,
   footnotes: true,
   crossReferences: false,
@@ -33,21 +33,18 @@ let lastTag = '',
   isTitle = false,
   noteCount = 0;
 
-function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled = false) {
-  if (!filterOptions || filterOptions === {}) {
-    filterOptions = swFilterOptions;
-  }
+function getJsonFromXML(rawXML: types.ChapterXML, debugOutputEnabled = false) {
+  const filterOptions = defaultFilterOptions;
 
   let verse = [];
-  const JsonResult = {};
 
   lastTag = '';
   currentNode = null;
   currentNote = null;
   currentRef = null;
   quote = null;
-  title = null;
-  titleText = '';
+  let title = null;
+  let titleText = '';
   verseData = null;
   noteText = '';
   outText = '';
@@ -57,7 +54,6 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled =
   footnotesData = {};
   isTitle = false;
   noteCount = 0;
-
 
   // Handle Parsing errors
   parser.onerror = function (e) {
@@ -189,7 +185,7 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled =
   };
 
   const verses = [];
-  rawXML.forEach((verseXML) => {
+  rawXML.verses.forEach((verseXML: types.VerseXML) => {
     const verseNum = verseXML.verse;
     const verseText = verseXML.text;
     const verseXml = `<xml verseNum = '${verseNum}'>${verseText}</xml>`;
@@ -215,6 +211,8 @@ function getJsonFromXML(rawXML, inDirection, filterOptions, debugOutputEnabled =
       chapterText += renderVerseAsFormattedText(verse);
     });
     console.log(chapterText);
+
+    console.log(verses);
   }
 
   return verses;
@@ -279,7 +277,7 @@ function getStrongsNumbers() {
   return strongsNumbers;
 }
 
-function processFootnotes(t, filterOptions) {
+function processFootnotes(t: string, filterOptions: { array: boolean, crossReferences: boolean, footnotes: boolean, headings: boolean, indentation: boolean, oneVersePerLine: boolean, strongsNumbers: boolean, wordsOfChristInRed: boolean }) {
   let out = '';
   if (currentNote.attributes.type === 'crossReference' && filterOptions.crossReferences) {
     if (lastTag !== 'reference') {
@@ -314,9 +312,6 @@ function processCrossReference(inText) {
   return out;
 }
 
-const osis = {
+export default {
   getJsonFromXML,
 };
-
-// Return osis filter methods
-module.exports = osis;

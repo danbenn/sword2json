@@ -1,5 +1,5 @@
-const VerseScheme = require('./VerseScheme');
-const ModuleConfig = require('./ModuleConfig');
+import ModuleConfig from './ModuleConfig';
+import VerseScheme from './VerseScheme';
 const base64 = require('base64-js');
 
 let start = 0;
@@ -9,56 +9,56 @@ let isEnd = false;
 /**
  * Index of all book, chapter and verse entry points in a Sword module.
  */
-class ModuleIndex {
-  constructor(files, config) {
-    this.oldTestament = {};
-    this.newTestament = {};
+export default class ModuleIndex {
+  rawPosOT: object;
+  rawPosNT: object;
+  binaryOT: Uint8Array;
+  binaryNT: Uint8Array;
+  config: ModuleConfig;
+  constructor(files: object, config: ModuleConfig) {
+    const oldTestament: any = {};
+    const newTestament: any = {};
 
-    Object.entries(files).forEach(([name, file]) => {
+    Object.entries(files).forEach(([name, file]: any) => {
       if (name.includes('ot.bzs')) {
-        this.oldTestament.bookPositions = file;
+        oldTestament.bookPositions = file;
       } else if (name.includes('ot.bzv')) {
-        this.oldTestament.chapterVersePositions = file;
+        oldTestament.chapterVersePositions = file;
       } else if (name.includes('ot.bzz')) {
-        this.oldTestament.binary = file;
+        oldTestament.binary = file;
       } else if (name.includes('nt.bzs')) {
-        this.newTestament.bookPositions = file;
+        newTestament.bookPositions = file;
       } else if (name.includes('nt.bzv')) {
-        this.newTestament.chapterVersePositions = file;
+        newTestament.chapterVersePositions = file;
       } else if (name.includes('nt.bzz')) {
-        this.newTestament.binary = file;
+        newTestament.binary = file;
       }
     });
 
-    const versification = config.Versification;
+    const versification = config.versification;
 
-    const bookPosOT = this.getBookPositions(this.oldTestament.bookPositions);
-    const rawPosOT = this.getChapterVersePositions(this.oldTestament.chapterVersePositions,
-      bookPosOT, 'ot', versification);
+    const bookPosOT = this.getBookPositions(oldTestament.bookPositions);
+    const rawPosOT = this.getChapterVersePositions(oldTestament.chapterVersePositions,
+                                                   bookPosOT, 'ot', versification);
 
-    const bookPosNT = this.getBookPositions(this.newTestament.bookPositions);
-    const rawPosNT = this.getChapterVersePositions(this.newTestament.chapterVersePositions,
-      bookPosNT, 'nt', versification);
+    const bookPosNT = this.getBookPositions(newTestament.bookPositions);
+    const rawPosNT = this.getChapterVersePositions(newTestament.chapterVersePositions,
+                                                   bookPosNT, 'nt', versification);
 
     this.rawPosOT = rawPosOT;
     this.rawPosNT = rawPosNT;
-    this.binaryOT = this.oldTestament.binary;
-    this.binaryNT = this.newTestament.binary;
+    this.binaryOT = oldTestament.binary;
+    this.binaryNT = newTestament.binary;
     this.config = config;
   }
 
-  /**
-   * Initialize from a Node.js buffer.
-   * @param {Buffer} buffer - contents of a single .zip file
-   * @returns {ModuleIndex} - module built with given files
-   */
-  static fromNodeBuffer(buffer) {
-    const JSZip = require('jszip');
-    const zip = new JSZip(buffer);
+  static fromNodeBuffer(buffer: Buffer): ModuleIndex {
+    const jSZip = require('jszip');
+    const zip = new jSZip(buffer);
     const filenames = Object.keys(zip.files);
     const files = {};
-    let moduleConfigFile = null;
-    filenames.forEach((name) => {
+    let moduleConfigFile: Uint8Array;
+    filenames.forEach((name: string) => {
       files[name] = zip.files[name].asUint8Array();
       if (name.includes('.conf')) {
         moduleConfigFile = files[name];
@@ -77,22 +77,21 @@ class ModuleIndex {
       binaryOT: base64.fromByteArray(this.binaryOT),
       binaryNT: base64.fromByteArray(this.binaryNT),
       config: this.config,
-    }
+    };
   }
 
-  static fromSerializedJson(json) {
+  static fromSerializedJson(json: any) {
     return {
       rawPosOT: json.rawPosOT,
       rawPosNT: json.rawPosNT,
       binaryOT: base64.toByteArray(json.binaryOT),
       binaryNT: base64.toByteArray(json.binaryNT),
       config: json.config,
-    }
+    };
   }
 
-
-  static blobToBuffer(blob) {
-    const buffer = new Buffer.alloc(blob.byteLength);
+  static blobToBuffer(blob: Uint8Array) {
+    const buffer = Buffer.alloc(blob.byteLength);
     const view = new Uint8Array(blob);
     for (let i = 0; i < buffer.length; i += 1) {
       buffer[i] = view[i];
@@ -101,7 +100,7 @@ class ModuleIndex {
   }
 
   // Get the positions of each book
-  getBookPositions(inBuf) {
+  getBookPositions(inBuf: Uint8Array) {
     let startPos = 0,
       length = 0,
       unused = 0,
@@ -131,7 +130,7 @@ class ModuleIndex {
   }
 
   // dump some bytes in the chapter and verse index file
-  dumpBytes(inBuf) {
+  dumpBytes(inBuf: Uint8Array) {
     start = 0;
 
     for (let i = 0; i < 4; i += 1) {
@@ -143,7 +142,7 @@ class ModuleIndex {
   // ### This code is based on the zTextReader class from cross-connect (https://code.google.com/p/cross-connect), Copyright (C) 2011 Thomas Dilts ###
 
   // Get the position of each chapter and verse
-  getChapterVersePositions(inBuf, inBookPositions, inTestament, inV11n) {
+  getChapterVersePositions(inBuf: Uint8Array, inBookPositions: { length: number, startPos: number, unused: number }[], inTestament: string, inV11n: string) {
     this.dumpBytes(inBuf);
     const booksStart = (inTestament === 'ot') ? 0 : VerseScheme.getBooksInOT(inV11n);
     const booksEnd = (inTestament === 'ot') ? VerseScheme.getBooksInOT(inV11n) : VerseScheme.getBooksInOT(inV11n) + VerseScheme.getBooksInNT(inV11n);
@@ -156,7 +155,7 @@ class ModuleIndex {
       verseMax = 0,
       bookData = null,
       startPos = 0,
-      chapt = {},
+      chapt: any = {},
       foundEmptyChapter = 0,
       chapters = {};
 
@@ -238,7 +237,7 @@ class ModuleIndex {
       verseMax = 0,
       bookData = null,
       startPos = 0,
-      data = {},
+      data: any = {},
       osis = '';
 
     for (let b = booksStart; b < booksEnd; b++) {
@@ -253,13 +252,12 @@ class ModuleIndex {
         this.getIntFromStream(inFile);
         this.getShortIntFromStream(inFile);
 
-
         for (let v = 0; v < verseMax; v++) {
           startPos = this.getIntFromStream(inFile)[0];
           length = this.getShortIntFromStream(inFile)[0];
           if (length !== 0) {
           // console.log('VERSE', startPos, length);
-            osis = `${bookData.abbrev}.${parseInt(c + 1, 10)}.${parseInt(v + 1, 10)}`;
+            osis = `${bookData.abbrev}.${parseInt(String(c + 1), 10)}.${parseInt(String(v + 1), 10)}`;
             data[osis] = { startPos, length };
           }
         } // end verse
@@ -268,7 +266,7 @@ class ModuleIndex {
     return data;
   }
 
-  getIntFromStream(inBuf) {
+  getIntFromStream(inBuf: Uint8Array) {
     buf = inBuf.subarray(start, start + 4);
     isEnd = false;
     start += 4;
@@ -276,23 +274,19 @@ class ModuleIndex {
     return [buf[3] * 0x100000 + buf[2] * 0x10000 + buf[1] * 0x100 + buf[0], isEnd];
   }
 
-  getShortIntFromStream(inBuf, inCallback) {
+  getShortIntFromStream(inBuf: Uint8Array) {
     buf = inBuf.subarray(start, start + 2);
     isEnd = false;
     start += 2;
     if (buf.length !== 2) { isEnd = true; }
-    if (inCallback) { inCallback(buf[1] * 0x100 + buf[0], isEnd); }
     return [buf[1] * 0x100 + buf[0], isEnd];
   }
 
-  getInt48FromStream(inBuf, inCallback) {
+  getInt48FromStream(inBuf: Uint8Array) {
     buf = inBuf.subarray(start, start + 6);
     isEnd = false;
     start += 6;
     if (buf.length !== 6) { isEnd = true; }
-    if (inCallback) { inCallback(buf[1] * 0x100000000000 + buf[0] * 0x100000000 + buf[5] * 0x1000000 + buf[4] * 0x10000 + buf[3] * 0x100 + buf[2], isEnd); }
     return [buf[1] * 0x100000000000 + buf[0] * 0x100000000 + buf[5] * 0x1000000 + buf[4] * 0x10000 + buf[3] * 0x100 + buf[2], isEnd];
   }
 }
-
-module.exports = ModuleIndex;
