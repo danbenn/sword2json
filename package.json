@@ -1,6 +1,6 @@
 {
   "name": "sword2json",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "description": "a JSON interface for Sword Bible modules",
   "main": "dist/index.js",
   "repository": {
