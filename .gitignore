@@ -4,4 +4,4 @@ node_modules/
 *.db
 build/*
 yarn-error.log
-dist/*
+lib/*

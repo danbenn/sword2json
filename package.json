@@ -2,7 +2,7 @@
   "name": "sword2json",
   "version": "1.0.2",
   "description": "a JSON interface for Sword Bible modules",
-  "main": "dist/index.js",
+  "main": "lib/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/danbenn/sword2json"
@@ -10,7 +10,7 @@
   "author": "danbennett <danielbennett@gmx.com>",
   "license": "MIT",
   "files": [
-    "dist/*"
+    "lib/*"
   ],
   "dependencies": {
     "@types/jest": "^23.3.5",
@@ -35,8 +35,8 @@
     "xml-formatter": "^1.0.1"
   },
   "scripts": {
-    "run": "./node_modules/ts-node/dist/bin.js",
-    "build": "rm -rf ./dist/ && ./node_modules/.bin/tsc",
+    "run": "./node_modules/ts-node/lib/bin.js",
+    "build": "rm -rf ./src/osis2json/lib/ && npx tsc",
     "test": "./node_modules/jest/bin/jest.js",
     "lint": "./node_modules/tslint/bin/tslint --fix -c tslint.json 'src/**/*.{ts,tsx}'",
     "prepublish": "npm run lint"

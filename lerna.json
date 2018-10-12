@@ -2,7 +2,7 @@
 {
   "lerna": "3.4.3",
   "packages": [
-    "src/osis2json"
+    "src/*"
   ],
   "version": "3.0.2"
 }

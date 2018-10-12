@@ -14,8 +14,8 @@
   },
   "scripts": {
     "prepublishOnly": "tsc -b .",
-    "build": "rm -rf ./dist/ && ./node_modules/.bin/tsc",
-    "test": "./node_modules/jest/bin/jest.js --resolveJsonModule",
+    "build": "rm -rf ./lib/ && ./node_modules/.bin/tsc",
+    "test": "./node_modules/jest/bin/jest.js",
     "lint": "./node_modules/tslint/bin/tslint --fix -c tslint.json 'src/**/*.{ts,tsx}'"
   }
 }

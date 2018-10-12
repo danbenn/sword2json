@@ -1,0 +1,17 @@
+{
+  "name": "sword2osis",
+  "version": "0.1.0",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "lib/*"
+  ],
+  "dependencies": {
+    "bible-passage-reference-parser": "^2.0.1",
+    "sax": "^1.2.4",
+    "sqlite": "^3.0.0",
+    "stream": "^0.0.2",
+    "osis2json": "^0.1.0"
+  },
+}
