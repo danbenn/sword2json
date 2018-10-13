@@ -36,9 +36,11 @@
   },
   "scripts": {
     "run": "./node_modules/ts-node/lib/bin.js",
-    "build": "rm -rf ./src/osis2json/lib/ && npx tsc",
+    "build:osis2json": "npx tsc -p src/osis2json/tsconfig.json",
+    "build:sword2osis": "npx tsc -p src/sword2osis/tsconfig.json",
+    "lint:osis2json": "./node_modules/tslint/bin/tslint -c tslint.json --fix 'src/osis2json/src/*.ts'",
+    "lint:sword2osis": "./node_modules/tslint/bin/tslint -c tslint.json --fix 'src/sword2osis/src/*.ts'",
     "test": "./node_modules/jest/bin/jest.js",
-    "lint": "./node_modules/tslint/bin/tslint --fix -c tslint.json 'src/**/*.{ts,tsx}'",
     "prepublish": "npm run lint"
   }
 }

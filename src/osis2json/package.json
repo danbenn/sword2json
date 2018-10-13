@@ -12,10 +12,4 @@
     "sax": "^1.2.4",
     "stream": "^0.0.2"
   },
-  "scripts": {
-    "prepublishOnly": "tsc -b .",
-    "build": "rm -rf ./lib/ && ./node_modules/.bin/tsc",
-    "test": "./node_modules/jest/bin/jest.js",
-    "lint": "./node_modules/tslint/bin/tslint --fix -c tslint.json 'src/**/*.{ts,tsx}'"
-  }
 }
