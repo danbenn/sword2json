@@ -1,7 +1,5 @@
-const bcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
 import * as types from './types';
 
-const bcv = new bcvParser();
 const sax = require('sax');
 
 const parser = sax.parser(true); // strict = true
@@ -290,7 +288,7 @@ function processFootnotes(t: string, filterOptions: types.JsonFilterOptions) {
 
 function processCrossReference(inText) {
   let out = '';
-  const osisRef = bcv.parse(inText).osis();
+  const osisRef = inText;
   if (osisRef !== '' && currentRef) {
     const n = currentRef.attributes.n || currentNote.attributes.n;
     out += `<a href="?type=crossReference&osisRef=${osisRef}&n=${n}">${inText}</a>`;

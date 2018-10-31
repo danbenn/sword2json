@@ -4,6 +4,4 @@ node_modules/
 *.db
 build/*
 yarn-error.log
-*lib/*
-*.d.ts*
-*.js.map
+lib/

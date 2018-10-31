@@ -1,14 +1,10 @@
 import VerseScheme from './VerseScheme';
-const bcvParser = require('bible-passage-reference-parser/js/en_bcv_parser').bcv_parser;
-
-const bcv = new bcvParser();
 
 function parseVkey(inVKey: string, inV11n: string) {
   const key: any = {};
-  key.osisRef = bcv.parse(inVKey).osis();
+  key.osisRef = inVKey;
   if (key.osisRef === '') {
-    // bcv.parse().osis() returns "" for passages it cannot resolve
-    key.osisRef = 'Matt.1'; // bcv.parse(inVKey + " 1").osis();
+    key.osisRef = 'Matt.1';
   }
   const split = key.osisRef.split('-')[0].split('.');
 

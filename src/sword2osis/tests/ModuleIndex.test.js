@@ -1,6 +1,6 @@
 const {
   SwordModule,
-  ModuleIndex
+  ModuleIndex,
 } = require('../src/index');
 const fs = require('fs');
 const path = require('path');

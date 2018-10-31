@@ -123,7 +123,7 @@ dashdash@^1.12.0:
   dependencies:
     assert-plus "^1.0.0"
 
-debug@^2.1.2:
+debug@^2.1.2, debug@^2.2.0:
   version "2.6.9"
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.9.tgz#5d128515df134ff327e90a4c93f4e077a536341f"
   dependencies:
@@ -459,6 +459,14 @@ osenv@^0.1.4:
     os-homedir "^1.0.0"
     os-tmpdir "^1.0.0"
 
+osis2json@^0.1.0:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/osis2json/-/osis2json-0.1.4.tgz#d114c189556bf8dde188b4d57de385daec0d0420"
+  dependencies:
+    sax "^1.2.4"
+    stream "^0.0.2"
+    xml-formatter "^1.0.1"
+
 path-is-absolute@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
@@ -690,6 +698,18 @@ wide-align@^1.1.0:
 wrappy@1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
+
+xml-formatter@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/xml-formatter/-/xml-formatter-1.0.1.tgz#380833ddd0bcea2c0986defebba71f84384f353d"
+  dependencies:
+    xml-parser-xo "^2.1.1"
+
+xml-parser-xo@^2.1.1:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/xml-parser-xo/-/xml-parser-xo-2.1.3.tgz#4ea8eb856dfa4dd75c4ab54b251558de0adc1c61"
+  dependencies:
+    debug "^2.2.0"
 
 yallist@^3.0.0, yallist@^3.0.2:
   version "3.0.2"

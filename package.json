@@ -40,6 +40,8 @@
     "lint:osis2json": "./node_modules/tslint/bin/tslint -c tslint.json --fix 'src/osis2json/src/*.ts'",
     "lint:sword2osis": "./node_modules/tslint/bin/tslint -c tslint.json --fix 'src/sword2osis/src/*.ts'",
     "test:osis2json": "./node_modules/jest/bin/jest.js src/osis2json/tests/*",
+    "test:sword2osis": "./node_modules/jest/bin/jest.js src/sword2osis/tests/*",
+    "test:osis2sqlite": "npx jest src/osis2sqlite",
     "prepublish": "yarn lint:osis2json && yarn build:osis2json"
   }
 }
