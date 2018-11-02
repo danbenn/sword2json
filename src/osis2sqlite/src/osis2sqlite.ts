@@ -1,5 +1,4 @@
 import * as types from './types';
-import { watch } from 'fs';
 
 const sax = require('sax');
 
@@ -18,6 +17,22 @@ interface ParserContext {
   noteCount: number;
   title: any;
   titleText: string;
+}
+
+enum OsisTag {
+  SECTION_HEADING = 'title',
+  DIVINE_NAME = 'divineName',
+  NOTE = 'note',
+  CROSS_REFERENCE = 'reference',
+  XML = 'xml',
+  POETIC_LINE = 'l',
+  LINE_GROUP = 'lg',
+  QUOTE = 'q',
+}
+
+enum Indentation {
+  small = '1',
+  large = '2',
 }
 
 function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
@@ -39,9 +54,7 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
   const verse = [];
 
   // Handle Parsing errors
-  parser.onerror = function (e) {
-    parser.resume();
-  };
+  parser.onerror = () => parser.resume();
 
   // Text node
   parser.ontext = function (t) {
@@ -59,21 +72,13 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
       }
     } else if (context.currentNode) {
       switch (context.currentNode.name) {
-        case 'title':
+        case OsisTag.SECTION_HEADING:
           context.titleText += t;
           break;
-        case 'divineName':
+        case OsisTag.DIVINE_NAME:
           if (context.title) {
             const strongsNumbers = getStrongsNumbers(context);
             verse.push([t, strongsNumbers]);
-          }
-          break;
-        case 'hi':
-          if ('attributes' in context.currentNode && 'lemma' in context.currentNode.attributes) {
-            const strongsNumbers = getStrongsNumbers(context);
-            verse.push([t, strongsNumbers]);
-          } else {
-            verse.push([t]);
           }
           break;
         default:
@@ -96,11 +101,11 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
     context.currentNode = node;
     context.lastTag = node.name;
     switch (node.name) {
-      case 'xml': // enclosing tag of entire body of content
+      case OsisTag.XML: // enclosing tag of entire body of content
         context.osisRef = node.attributes.osisRef;
         context.verseNum = node.attributes.verseNum;
         break;
-      case 'note': // footnote or cross-reference object
+      case OsisTag.NOTE: // footnote or cross-reference object
         if (node.attributes.type !== 'crossReference') {
           const osisRef = node.attributes.osisRef || node.attributes.annotateRef || context.osisRef;
           if (!node.attributes.n) context.noteCount += 1;
@@ -109,17 +114,17 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
         }
         context.currentNote = node;
         break;
-      case 'reference': // cross-reference element
+      case OsisTag.CROSS_REFERENCE: // cross-reference element
         context.currentRef = node;
         break;
-      case 'title': // section heading
+      case OsisTag.SECTION_HEADING: // section heading
         context.title = node;
         break;
-      case 'l': // line indentation
-        if (node.attributes.level === '1' && node.attributes.sID) {
+      case OsisTag.POETIC_LINE: // line indentation
+        if (node.attributes.level === Indentation.small && node.attributes.sID) {
           verse.push(['$line-break']);
           verse.push(['$small-indent']);
-        } else if (node.attributes.level === '2' && node.attributes.sID) {
+        } else if (node.attributes.level === Indentation.large && node.attributes.sID) {
           verse.push(['$line-break']);
           verse.push(['$large-indent']);
         }
@@ -129,20 +134,20 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
 
   parser.onclosetag = function (tagName) {
     switch (tagName) {
-      case 'title':
+      case OsisTag.SECTION_HEADING:
         verse.push([`$heading=${context.titleText.replace(/<(?:.|\n)*?>/gm, '')}`]);
         context.currentNode = null;
         context.title = null;
         context.titleText = '';
         break;
-      case 'note':
+      case OsisTag.NOTE:
         context.noteText = '';
         context.currentNote = null;
         break;
-      case 'reference':
+      case OsisTag.CROSS_REFERENCE:
         context.currentRef = null;
         break;
-      case 'q':
+      case OsisTag.QUOTE:
         const isClosingQuotationMark = context.currentNode && context.currentNode.isSelfClosing
           && context.currentNode.attributes.marker;
         if (isClosingQuotationMark) {
@@ -153,7 +158,7 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
           context.quote = null;
         }
         break;
-      case 'lg': // 'line group' (paragraph)
+      case OsisTag.LINE_GROUP: // 'line group' (paragraph)
         verse.push(['$paragraph-break']);
         break;
     }
@@ -242,7 +247,7 @@ function processFootnotes(t: string, context: ParserContext) {
   let out = '';
   if (context.currentNote.attributes.type === 'crossReference') {
     /*
-    if (context.lastTag !== 'reference') {
+    if (context.lastTag !== OsisTag.CROSS_REFERENCE) {
       const crossRef = processCrossReference(t, context);
       return crossRef;
     }
