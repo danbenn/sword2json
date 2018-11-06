@@ -1,0 +1,13 @@
+{
+  "name": "sql-bible",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "reflect-metadata": "^0.1.12",
+    "typeorm": "^0.2.8"
+  },
+  "devDependencies": {
+    "sqlite3": "^4.0.3",
+    "ts-node": "^7.0.1"
+  }
+}
