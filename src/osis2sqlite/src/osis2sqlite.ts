@@ -1,65 +1,32 @@
-import * as types from './types';
+import {
+  ParserContext,
+  OsisXmlNode,
+  NoteType,
+  BibleVersion,
+  Phrase,
+  PhraseMorphology,
+  StrongsNumber,
+  StrongsPhrase,
+  Footnote,
+  CrossReference,
+  LineBreak,
+  ParagraphBreak,
+  Highlighting,
+  OsisXmlTag,
+  Indentation,
+} from './types';
 
 const sax = require('sax');
 
-interface ParserContext {
-  lastTag: string;
-  currentNode: OsisXmlNode;
-  currentNote: OsisXmlNode;
-  currentRef: OsisXmlNode;
-  quote: OsisXmlNode;
-  verseNum: string;
-  noteText: string;
-  osisRef: string;
-  footnotesData: any;
-  noteCount: number;
-  title: OsisXmlNode;
-  titleText: string;
-}
+const DEBUG_OUTPUT_ENABLED = false;
 
-interface OsisXmlNode {
-  attributes: {
-    annotateRef: string,
-    eID?: string,
-    lemma?: string,
-    level?: string,
-    marker?: string,
-    n?: string,
-    osisID?: string,
-    osisRef: string,
-    sID?: string,
-    subType?: string,
-    type?: string,
-    verseNum?: string,
-    who?: string,
-  };
-  isSelfClosing: boolean;
-  name: string;
-}
-
-enum OsisXmlTag {
-  SECTION_HEADING = 'title',
-  DIVINE_NAME = 'divineName',
-  NOTE = 'note',
-  CROSS_REFERENCE = 'reference',
-  XML = 'xml',
-  POETIC_LINE = 'l',
-  LINE_GROUP = 'lg',
-  QUOTE = 'q',
-}
-
-enum Indentation {
-  small = '1',
-  large = '2',
-}
-
-function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
+function osis2sqlite(verseXML: string) {
   const context: ParserContext = {
-    lastTag: '',
     currentNode: null,
-    currentNote: null,
-    currentRef: null,
-    quote: null,
+    currentNoteNode: null,
+    currentNoteNum: 0,
+    currentCrossRefNode: null,
+    quoteNode: null,
     verseNum: null,
     noteText: '',
     osisRef: '',
@@ -80,39 +47,43 @@ function osis2sqlite(verseXML: string, debugOutputEnabled = false) {
     parseClosingTag(tagName, verse, context);
   parser.onerror = () => parser.resume();
 
-  if (debugOutputEnabled) {
+  if (DEBUG_OUTPUT_ENABLED) {
     const prettifyXML = require('xml-formatter');
+    console.log(prettifyXML(verseXML));
     console.log('*****************************************************');
   }
 
   parser.write(verseXML);
   parser.close();
 
+  addVerseNumber(verse, context.verseNum);
+
   return verse;
+}
+
+function addVerseNumber(verse, verseNum) {
+  let index = 0;
+  // Skip special elements until we get to plain text
+  while (verse[index][0][0] === '$') {
+    index += 1;
+  }
+  const verseNumElement = ['$verse-num', Number(verseNum)];
+  verse.splice(index, 0, verseNumElement);
 }
 
 function parseOpeningTag(node: OsisXmlNode, verse, context: ParserContext) {
   context.currentNode = node;
-  context.lastTag = node.name;
   switch (node.name) {
     case OsisXmlTag.XML:
       context.osisRef = node.attributes.osisRef;
       context.verseNum = node.attributes.verseNum;
       break;
     case OsisXmlTag.NOTE:
-      if (node.attributes.type !== 'crossReference') {
-        const osisRef =
-          node.attributes.osisRef ||
-          node.attributes.annotateRef ||
-          context.osisRef;
-        if (!node.attributes.n) context.noteCount += 1;
-        const n = node.attributes.n || context.noteCount;
-        verse.push([`$note=${n}&osisRef=${osisRef}`]);
-      }
-      context.currentNote = node;
+      context.currentNoteNode = node;
       break;
     case OsisXmlTag.CROSS_REFERENCE:
-      context.currentRef = node;
+      context.currentCrossRefNode = node;
+      addCrossReference(context, verse);
       break;
     case OsisXmlTag.SECTION_HEADING:
       context.title = node;
@@ -120,15 +91,70 @@ function parseOpeningTag(node: OsisXmlNode, verse, context: ParserContext) {
     case OsisXmlTag.POETIC_LINE:
       if (node.attributes.level === Indentation.small && node.attributes.sID) {
         verse.push(['$line-break']);
-        verse.push(['$small-indent']);
+        verse.push(['$indentation', 1]);
       } else if (
         node.attributes.level === Indentation.large &&
         node.attributes.sID
       ) {
         verse.push(['$line-break']);
-        verse.push(['$large-indent']);
+        verse.push(['$indentation', 2]);
       }
       break;
+  }
+}
+
+function addCrossReference(context, verse) {
+  const letter = context.currentNoteNode.attributes.n;
+  const reference = context.currentCrossRefNode.attributes.osisRef;
+  const lastElement = verse[verse.length - 1];
+  if (lastElement[0] === '$cross-ref' && lastElement[1] === letter) {
+    verse[verse.length - 1][2].push(reference);
+    return;
+  }
+  verse.push(['$cross-ref', letter, [reference]]);
+}
+
+function parseTextNode(text: string, verse, context: ParserContext) {
+  let formattedText = text;
+  if (context.currentNode && context.currentNode.name === OsisXmlTag.HIGHLIGHT) {
+    formattedText = getPhraseWithHighlighting(text, context);
+  }
+  if (isFootnote(context.currentNoteNode)) {
+    parseFootnote(formattedText, context);
+    return;
+  }
+  if (context.currentNoteNode) {
+    return;
+  }
+  if (text.trim().length === 0) {
+    return;
+  }
+  if (context.quoteNode) {
+    parseQuote(formattedText, context, verse);
+    return;
+  }
+  if (context.currentNode) {
+    switch (context.currentNode.name) {
+      case OsisXmlTag.SECTION_HEADING:
+        context.titleText += formattedText;
+        break;
+      case OsisXmlTag.DIVINE_NAME:
+        if (context.title) {
+          const strongsNumbers = getStrongsNumbers(context);
+          verse.push([formattedText, strongsNumbers]);
+        }
+        break;
+      default:
+        if (hasStrongsNumbers(context.currentNode)) {
+          const strongsNumbers = getStrongsNumbers(context);
+          verse.push([formattedText, strongsNumbers]);
+          break;
+        }
+        verse.push([formattedText]);
+        break;
+    }
+  } else {
+    verse.push([formattedText]);
   }
 }
 
@@ -136,18 +162,22 @@ function parseClosingTag(tagName: string, verse, context: ParserContext) {
   switch (tagName) {
     case OsisXmlTag.SECTION_HEADING:
       verse.push([
-        `$heading=${context.titleText.replace(/<(?:.|\n)*?>/gm, '')}`,
+        '$title', context.titleText.replace(/<(?:.|\n)*?>/gm, ''),
       ]);
       context.currentNode = null;
       context.title = null;
       context.titleText = '';
       break;
     case OsisXmlTag.NOTE:
+      if (context.noteText.trim()) {
+        verse.push(getFootnote(context));
+        context.noteCount += 1;
+      }
       context.noteText = '';
-      context.currentNote = null;
+      context.currentNoteNode = null;
       break;
     case OsisXmlTag.CROSS_REFERENCE:
-      context.currentRef = null;
+      context.currentCrossRefNode = null;
       break;
     case OsisXmlTag.QUOTE:
       const isClosingQuotationMark =
@@ -158,61 +188,50 @@ function parseClosingTag(tagName: string, verse, context: ParserContext) {
         verse.push([context.currentNode.attributes.marker]);
       }
       if (!context.currentNode) {
-        context.quote = null;
+        context.quoteNode = null;
       }
       break;
     case OsisXmlTag.LINE_GROUP:
-      verse.push(['$paragraph-break']);
+      // verse.push(['$paragraph-break']);
       break;
   }
-  context.lastTag = '';
   context.currentNode = null;
 }
 
-function parseTextNode(text: string, verse, context: ParserContext) {
-  if (context.currentNote) {
-    processFootnotes(text, context);
-    return;
-  }
-  if (context.quote) {
-    const strongsNumbers = getStrongsNumbers(context);
-    if (context.quote.attributes.who === 'Jesus' && text) {
-      verse.push([`$redLetter=${text}`]);
-      return;
-    }
-    verse.push([text]);
-    if (strongsNumbers) {
-      verse[verse.length - 1].push(strongsNumbers);
-    }
-    return;
-  }
-  if (context.currentNode) {
-    switch (context.currentNode.name) {
-      case OsisXmlTag.SECTION_HEADING:
-        context.titleText += text;
-        break;
-      case OsisXmlTag.DIVINE_NAME:
-        if (context.title) {
-          const strongsNumbers = getStrongsNumbers(context);
-          verse.push([text, strongsNumbers]);
-        }
-        break;
-      default:
-        if (hasStrongsNumbers(context.currentNode)) {
-          const strongsNumbers = getStrongsNumbers(context);
-          verse.push([text, strongsNumbers]);
-          break;
-        }
-        verse.push([text]);
-        break;
-    }
-  } else {
-    verse.push([text]);
-  }
+function getFootnote(context: ParserContext) {
+  const referenceNum = (context.noteCount + 1).toString();
+  return ['$footnote', referenceNum, context.noteText];
 }
 
-function hasStrongsNumbers(currentNode: OsisXmlNode) {
-  return 'attributes' in currentNode && 'lemma' in currentNode.attributes;
+function getPhraseWithHighlighting(phrase: string, context: ParserContext) {
+  switch (context.currentNode.attributes.type) {
+    case Highlighting.ITALIC:
+      return `"${phrase}"`;
+    case Highlighting.BOLD:
+      return `'${phrase}'`;
+    case Highlighting.UNDERLINE:
+      return `"${phrase}"`;
+  }
+  return phrase;
+}
+
+function parseQuote(text, verse, context) {
+  const strongsNumbers = getStrongsNumbers(context);
+  if (context.quoteNode.attributes.who === 'Jesus' && text) {
+    verse.push([`$redLetter=${text}`]);
+    return;
+  }
+  verse.push([text]);
+  if (strongsNumbers) {
+    verse[verse.length - 1].push(strongsNumbers);
+  }
+}
+function isFootnote(node: OsisXmlNode) {
+  return node && (node.attributes.type !== NoteType.CROSS_REFERENCE);
+}
+
+function hasStrongsNumbers(node: OsisXmlNode) {
+  return 'attributes' in node && 'lemma' in node.attributes;
 }
 
 function getStrongsNumbers(context: ParserContext) {
@@ -228,54 +247,10 @@ function getStrongsNumbers(context: ParserContext) {
   return strongsNumbers;
 }
 
-function processFootnotes(t: string, context: ParserContext) {
-  let out = '';
-  if (context.currentNote.attributes.type === 'crossReference') {
-    /*
-    if (context.lastTag !== OsisXmlTag.CROSS_REFERENCE) {
-      const crossRef = processCrossReference(t, context);
-      return crossRef;
-    }
-    const refOsis = context.currentRef.attributes.osisRef;
-    const noteOsis = context.currentNote.attributes.osisRef;
-    const crossRef = (context.currentRef) ? refOsis :noteOsis;
-    console.log(noteOsis);
-    out += `<a href='?type=crossReference&osisRef=${crossRef}&n=${
-      context.currentNote.attributes.n}'>${t}</a>`;
-    */
-  } else if (context.currentNote.attributes.type !== 'crossReference') {
-    const noteOsis = context.currentNote.attributes.osisRef;
-    const osisRef =
-      noteOsis || context.currentNote.attributes.annotateRef || context.osisRef;
-    const n = context.currentNote.attributes.n || context.noteCount;
-    if (!context.footnotesData.hasOwnProperty(osisRef)) {
-      context.footnotesData[osisRef] = [{ n, note: t }];
-    } else if (
-      context.footnotesData[osisRef][context.footnotesData[osisRef].length - 1]
-        .n === n
-    ) {
-      context.footnotesData[osisRef][
-        context.footnotesData[osisRef].length - 1
-      ].note += t;
-    } else {
-      context.footnotesData[osisRef].push({ n, note: t });
-    }
-  }
-  return context.footnotesData;
-}
-
-function processCrossReference(inText, context) {
-  let out = '';
-  const osisRef = inText;
-  if (osisRef !== '' && context.currentRef) {
-    const n =
-      context.currentRef.attributes.n || context.currentNote.attributes.n;
-    out += `$crossRef=&osisRef=${osisRef}&n=${n}'>${inText}</a>`;
-  } else {
-    out += inText;
-  }
-  console.log(out);
-  return out;
+function parseFootnote(text: string, context: ParserContext) {
+  context.currentNoteNum = Number(context.currentNoteNode.attributes.n)
+                           || Number(context.noteCount);
+  context.noteText += text;
 }
 
 export default osis2sqlite;
