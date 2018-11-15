@@ -7,6 +7,7 @@
     "typeorm": "^0.2.8"
   },
   "devDependencies": {
+    "random-words": "^1.1.0",
     "sqlite3": "^4.0.3",
     "ts-node": "^7.0.1"
   }

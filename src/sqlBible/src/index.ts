@@ -1,3 +1,1 @@
-import { SqlBible } from './SqlBible';
-
-export default SqlBible;
+export * from './SqlBible';
