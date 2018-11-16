@@ -28,4 +28,8 @@ export class BibleBook {
         const chaptersMeta = JSON.parse(this.chaptersMetaJson);
         return chaptersMeta[chapterNumber - 1];
     }
+
+    setChaptersMeta(chaptersCount: number[]) {
+        this.chaptersMetaJson = JSON.stringify(chaptersCount);
+    }
 }

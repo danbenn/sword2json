@@ -1,9 +1,8 @@
 const wordGen = require('random-words');
 
 import { SqlBible } from './SqlBible';
-import { BiblePhrase, BibleCrossReference, BibleNote, BibleBook, BibleSection } from './models';
+import { BiblePhrase, BibleNote, BibleBook } from './models';
 import { getOsisIdFromBookGenericId } from './data/bibleMeta';
-import { generateNormalizedRefId } from './utils';
 
 // function getRandomChar() {
 //     var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; //abcdefghijklmnopqrstuvwxyz0123456789
@@ -16,14 +15,14 @@ const sqlBible = new SqlBible({
 });
 
 export const genDb = async () => {
-    for (let book = 1; book <= 2; book++) {
-        await sqlBible.addBook(
+    for (let bookNum = 1; bookNum <= 2; bookNum++) {
+        const book = await sqlBible.addBook(
             new BibleBook({
                 versionId: 1,
-                number: book,
-                osisId: getOsisIdFromBookGenericId(book),
+                number: bookNum,
+                osisId: getOsisIdFromBookGenericId(bookNum),
                 title: wordGen({ min: 1, max: 3, join: ' ' }),
-                type: book < 40 ? 'ot' : 'nt',
+                type: bookNum < 40 ? 'ot' : 'nt',
                 chaptersMetaJson: JSON.stringify({})
             })
         );
@@ -31,7 +30,7 @@ export const genDb = async () => {
             for (let paragraph = 0; paragraph < 5; paragraph++) {
                 console.log(
                     'adding book ' +
-                        book +
+                        bookNum +
                         ' and chapter ' +
                         chapter +
                         ' and paragraph ' +
@@ -52,7 +51,7 @@ export const genDb = async () => {
                             notes = [note];
                         }
                         const phrase = new BiblePhrase({
-                            bookOsisId: getOsisIdFromBookGenericId(book),
+                            bookOsisId: getOsisIdFromBookGenericId(bookNum),
                             versionChapterNum: chapter,
                             versionVerseNum: verse,
                             versionId: 1,
@@ -66,18 +65,10 @@ export const genDb = async () => {
                             crossReferences:
                                 verse % 5 === 0 && phraseIdx === 1
                                     ? [
-                                          new BibleCrossReference({
-                                              normalizedRefId: generateNormalizedRefId(
-                                                  sqlBible.getNormalizedV11n({
-                                                      bookOsisId: 'Gen',
-                                                      versionId: 1,
-                                                      versionChapterNum: 3,
-                                                      versionVerseNum: verse
-                                                  }),
-                                                  false
-                                              ),
-                                              versionChapterNum: 3,
-                                              versionVerseNum: verse
+                                          await sqlBible.createCrossReference({
+                                              versionId: 1,
+                                              bookOsisId: 'Gen',
+                                              versionChapterNum: 1
                                           })
                                       ]
                                     : undefined
@@ -88,10 +79,11 @@ export const genDb = async () => {
                 await sqlBible.addParagraph(phrases);
             }
         }
+        await sqlBible.generateBookMetadata(book);
     }
 };
 
-const getData = async () => {
+export const getData = async () => {
     const section = await sqlBible.getPhrases({
         versionId: 1,
         bookOsisId: 'Gen',

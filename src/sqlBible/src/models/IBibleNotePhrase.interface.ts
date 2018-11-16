@@ -10,5 +10,5 @@ export interface IBibleNotePhrase {
 
     quoteLevel?: number;
 
-    crossReferences: BibleCrossReference[];
+    crossReferences?: BibleCrossReference[];
 }

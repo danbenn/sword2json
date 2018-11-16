@@ -11,7 +11,8 @@ import {
     IBibleReferenceRangeVersion,
     IBibleReferenceRangeNormalized,
     IBibleReferenceNormalized,
-    IBibleReferenceVersion
+    IBibleReferenceVersion,
+    BibleCrossReference
 } from './models';
 import { parsePhraseId, generateNormalizedRefId } from './utils';
 
@@ -52,6 +53,7 @@ export class SqlBible {
     }
 
     async addPhrases(phrases: BiblePhrase[]) {
+        await this.dbReady;
         let verse,
             phraseNum = 0;
         for (const phrase of phrases) {
@@ -76,15 +78,52 @@ export class SqlBible {
         return await getManager().save(section);
     }
 
-    addVersion(version: BibleVersion) {
+    async addVersion(version: BibleVersion) {
+        await this.dbReady;
         return getManager().save(version);
     }
 
-    async generateMetadata(versionId: string) {
-        versionId;
+    async createCrossReference(refRange: IBibleReferenceRangeVersion) {
+        return new BibleCrossReference(this.getNormalizedReference(refRange));
     }
 
-    getBookForVersionReference(reference: IBibleReferenceVersion) {
+    async generateBookMetadata(book: BibleBook) {
+        await this.dbReady;
+        const metaData = await getManager()
+            .createQueryBuilder(BiblePhrase, 'phrase')
+            .addSelect('COUNT(DISTINCT phrase.versionVerseNum)', 'numVerses')
+            .where({
+                id: Between(
+                    generateNormalizedRefId(
+                        {
+                            bookOsisId: book.osisId,
+                            normalizedChapterNum: 1,
+                            normalizedVerseNum: 1,
+                            versionId: book.versionId
+                        },
+                        5
+                    ),
+                    generateNormalizedRefId(
+                        {
+                            bookOsisId: book.osisId,
+                            normalizedChapterNum: 999,
+                            normalizedVerseNum: 999,
+                            versionId: book.versionId
+                        },
+                        5
+                    )
+                )
+            })
+            .orderBy('phrase.versionChapterNum')
+            .groupBy('phrase.versionChapterNum')
+            .getRawMany();
+        book.setChaptersMeta(metaData.map(chapterMetaDb => chapterMetaDb.numVerses));
+        return getManager().save(book);
+        console.log(metaData);
+    }
+
+    async getBookForVersionReference(reference: IBibleReferenceVersion) {
+        await this.dbReady;
         return getManager().findOne(BibleBook, {
             where: {
                 versionId: reference.versionId,
@@ -93,7 +132,8 @@ export class SqlBible {
         });
     }
 
-    getBooksForVersion(versionId: number) {
+    async getBooksForVersion(versionId: number) {
+        await this.dbReady;
         return getManager().find(BibleBook, {
             where: {
                 versionId
@@ -112,14 +152,14 @@ export class SqlBible {
         const lastPhrase = await getManager().find(BiblePhrase, {
             where: {
                 id: Between(
-                    generateNormalizedRefId({ ...reference, versionId }, true),
+                    generateNormalizedRefId({ ...reference, versionId }, 5),
                     generateNormalizedRefId(
                         {
                             ...reference,
                             versionId,
                             phraseNum: 99
                         },
-                        true
+                        5
                     )
                 )
             },
@@ -190,14 +230,15 @@ export class SqlBible {
                 id: Raw(
                     col =>
                         `${col} BETWEEN '${generateNormalizedRefId(
-                            nRef
+                            nRef,
+                            5
                         )}' AND '${generateNormalizedRefId(
                             {
                                 bookOsisId: nRef.bookOsisId,
                                 normalizedChapterNum: nRef.normalizedChapterEndNum,
                                 normalizedVerseNum: nRef.normalizedVerseEndNum
                             },
-                            true
+                            5
                         )}' AND cast(${col} % 100000000000 / 100000000 as int) = ${
                             reference.versionId
                         }`
