@@ -1,7 +1,7 @@
 const wordGen = require('random-words');
 
 import { SqlBible } from './SqlBible';
-import { BiblePhrase, BibleCrossReference, BibleNote, BibleBook } from './models';
+import { BiblePhrase, BibleCrossReference, BibleNote, BibleBook, BibleSection } from './models';
 import { getOsisIdFromBookGenericId } from './data/bibleMeta';
 import { generateNormalizedRefId } from './utils';
 
@@ -92,7 +92,7 @@ export const genDb = async () => {
 };
 
 const getData = async () => {
-    const section = await sqlBible.getVerses({
+    const section = await sqlBible.getPhrases({
         versionId: 1,
         bookOsisId: 'Gen',
         versionChapterNum: 1,

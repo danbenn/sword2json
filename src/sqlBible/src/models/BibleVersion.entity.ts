@@ -25,7 +25,7 @@ export class BibleVersion {
     @Column()
     hasMorphology: boolean;
 
-    constructor(initializer: BibleVersion) {
+    constructor(initializer: Partial<BibleVersion>) {
         if (initializer) Object.assign(this, initializer);
     }
 }

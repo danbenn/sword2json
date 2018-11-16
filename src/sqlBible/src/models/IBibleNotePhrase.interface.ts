@@ -1,3 +1,5 @@
+import { BibleCrossReference } from '.';
+
 export interface IBibleNotePhrase {
     text: string;
     bold?: boolean;
@@ -7,4 +9,6 @@ export interface IBibleNotePhrase {
     indentLevel?: number;
 
     quoteLevel?: number;
+
+    crossReferences: BibleCrossReference[];
 }

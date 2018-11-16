@@ -76,9 +76,8 @@ export class SqlBible {
         return await getManager().save(section);
     }
 
-    async addVersion(version: BibleVersion) {
-        const newVersion = await getManager().save(version);
-        return newVersion.id;
+    addVersion(version: BibleVersion) {
+        return getManager().save(version);
     }
 
     async generateMetadata(versionId: string) {
@@ -183,7 +182,7 @@ export class SqlBible {
         };
     }
 
-    async getVerses(reference: IBibleReferenceRangeVersion) {
+    async getPhrases(reference: IBibleReferenceRangeVersion) {
         await this.dbReady;
         const nRef = this.getNormalizedReference(reference);
         return getManager().find(BiblePhrase, {
