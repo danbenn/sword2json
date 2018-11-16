@@ -1,16 +1,32 @@
-export interface IBibleReference {
-    versionId: number;
+export interface IBibleReferenceBase {
     bookOsisId: string;
-    chapterNum: number;
-    verseNum?: number;
-    chapterEndNum?: number;
-    verseEndNum?: number;
 }
 
-export interface IBibleReferenceNormalized {
+export interface IBibleReferenceNormalized extends IBibleReferenceBase {
+    normalizedChapterNum?: number;
+    normalizedVerseNum?: number;
+}
+
+export interface IBibleReferenceRangeNormalized extends IBibleReferenceNormalized {
+    normalizedChapterEndNum?: number;
+    normalizedVerseEndNum?: number;
+}
+
+export interface IBibleReferenceVersion extends IBibleReferenceBase {
+    versionId: number;
+    versionChapterNum?: number;
+    versionVerseNum?: number;
+}
+
+export interface IBibleReferenceRangeVersion extends IBibleReferenceVersion {
+    versionChapterEndNum?: number;
+    versionVerseEndNum?: number;
+}
+
+export interface IBiblePhraseRef extends IBibleReferenceNormalized {
     bookOsisId: string;
-    chapterNum: number;
-    verseNum: number;
-    chapterEndNum: number;
-    verseEndNum: number;
+    normalizedChapterNum?: number;
+    normalizedVerseNum?: number;
+    versionId?: number;
+    phraseNum?: number;
 }

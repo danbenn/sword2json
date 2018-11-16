@@ -12,10 +12,10 @@ export class BibleSection {
     level: number;
 
     @Column({})
-    phraseStartId: string;
+    phraseStartId: number;
 
     @Column({})
-    phraseEndId: string;
+    phraseEndId: number;
 
     @Column({ nullable: true })
     title?: string;

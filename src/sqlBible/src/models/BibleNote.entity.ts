@@ -16,7 +16,7 @@ export class BibleNote {
 
     @Column({ nullable: true })
     @Index()
-    phraseId?: string;
+    phraseId?: number;
 
     @ManyToOne(() => BiblePhrase, phrase => phrase.notes)
     phrase?: BiblePhrase;

@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { createConnection, ConnectionOptions, Connection, getManager, Raw } from 'typeorm';
+import { createConnection, ConnectionOptions, Connection, getManager, Raw, Between } from 'typeorm';
 
 import { BOOK_DATA } from './data/bibleMeta';
 import {
@@ -7,11 +7,13 @@ import {
     BibleVersion,
     BiblePhrase,
     BibleBook,
-    IBibleReference,
-    BibleSection
+    BibleSection,
+    IBibleReferenceRangeVersion,
+    IBibleReferenceRangeNormalized,
+    IBibleReferenceNormalized,
+    IBibleReferenceVersion
 } from './models';
-import { IBibleReferenceNormalized } from './models/IBibleReference.interface';
-import { generatePhraseId } from './utils';
+import { parsePhraseId, generateNormalizedRefId } from './utils';
 
 export class SqlBible {
     dbReady: Promise<Connection>;
@@ -29,25 +31,12 @@ export class SqlBible {
 
     async addBook(book: BibleBook) {
         await this.dbReady;
-        const newBook = await getManager().save(book);
-        return newBook.id;
+        return await getManager().save(book);
     }
 
     async addParagraph(phrases: BiblePhrase[]) {
         await this.dbReady;
-        let verse,
-            phraseNum = 0;
-        for (const phrase of phrases) {
-            if (!verse || verse != phrase.versionVerseNum) {
-                verse = phrase.versionVerseNum;
-                phraseNum = 1;
-            } else {
-                phraseNum++;
-            }
-            this.normalizePhrase(phrase);
-            phrase.phraseNum = phraseNum;
-        }
-        const newPhrases = await getManager().save(phrases);
+        const newPhrases = await this.addPhrases(phrases);
         const section = new BibleSection({
             phraseStartId: newPhrases[0].id!,
             phraseEndId: newPhrases[newPhrases.length - 1].id!,
@@ -56,32 +45,35 @@ export class SqlBible {
         return getManager().save(section);
     }
 
-    async addPhrase(phrase: BiblePhrase, phraseNum: number) {
-        if (!phrase.normalizedChapterNum) {
-            const nV11n = this.getNormalizedV11n(
-                phrase.versionId,
-                phrase.versionChapterNum,
-                phrase.versionVerseNum
-            );
-            phrase.normalizedChapterNum = nV11n.chapterNum;
-            phrase.normalizedVerseNum = nV11n.verseNum;
-        }
-        phrase.phraseNum = phraseNum;
+    async addPhrase(phrase: BiblePhrase) {
+        await this.dbReady;
+        await this.preparePhraseForDb(phrase);
         return await getManager().save(phrase);
+    }
+
+    async addPhrases(phrases: BiblePhrase[]) {
+        let verse,
+            phraseNum = 0;
+        for (const phrase of phrases) {
+            await this.normalizePhrase(phrase);
+            if (!verse || verse != phrase.normalizedVerseNum) {
+                verse = phrase.normalizedVerseNum;
+                phraseNum = await this.getNextPhraseIdForNormalizedVerseNum(
+                    phrase,
+                    phrase.versionId
+                );
+            } else {
+                phraseNum++;
+            }
+            phrase.phraseNum = phraseNum;
+        }
+
+        return getManager().save(phrases);
     }
 
     async addSection(section: BibleSection) {
         await this.dbReady;
         return await getManager().save(section);
-    }
-
-    async addVerse(phrases: BiblePhrase[]) {
-        await this.dbReady;
-        for (let i = 0; i < phrases.length; i++) {
-            const phrase = phrases[i];
-            this.normalizePhrase(phrase);
-        }
-        return getManager().save(phrases);
     }
 
     async addVersion(version: BibleVersion) {
@@ -93,57 +85,120 @@ export class SqlBible {
         versionId;
     }
 
-    getNormalizedReference(reference: IBibleReference): IBibleReferenceNormalized {
-        if (!reference.verseNum) reference.verseNum = 1;
-        if (!reference.chapterEndNum) reference.chapterEndNum = reference.chapterNum;
-        if (!reference.verseEndNum)
-            reference.verseEndNum =
-                BOOK_DATA[reference.bookOsisId].chapters[reference.chapterEndNum + 1];
+    getBookForVersionReference(reference: IBibleReferenceVersion) {
+        return getManager().findOne(BibleBook, {
+            where: {
+                versionId: reference.versionId,
+                osisId: reference.bookOsisId
+            }
+        });
+    }
 
-        const { chapterNum, verseNum } = this.getNormalizedV11n(
-            reference.versionId,
-            reference.chapterNum,
-            reference.verseNum
-        );
-        const { chapterNum: chapterEndNum, verseNum: verseEndNum } = this.getNormalizedV11n(
-            reference.versionId,
-            reference.chapterEndNum,
-            reference.verseEndNum
-        );
+    getBooksForVersion(versionId: number) {
+        return getManager().find(BibleBook, {
+            where: {
+                versionId
+            },
+            order: {
+                number: 'ASC'
+            }
+        });
+    }
+
+    async getNextPhraseIdForNormalizedVerseNum(
+        reference: IBibleReferenceNormalized,
+        versionId: number
+    ): Promise<number> {
+        await this.dbReady;
+        const lastPhrase = await getManager().find(BiblePhrase, {
+            where: {
+                id: Between(
+                    generateNormalizedRefId({ ...reference, versionId }, true),
+                    generateNormalizedRefId(
+                        {
+                            ...reference,
+                            versionId,
+                            phraseNum: 99
+                        },
+                        true
+                    )
+                )
+            },
+            order: {
+                id: 'DESC'
+            },
+            take: 1,
+            select: ['id']
+        });
+        return lastPhrase.length ? parsePhraseId(lastPhrase[0].id).phraseNum! + 1 : 1;
+    }
+    getNextPhraseIdForVersionVerseNum(reference: Required<IBibleReferenceVersion>) {
+        const nRef = this.getNormalizedV11n(reference);
+        return this.getNextPhraseIdForNormalizedVerseNum(nRef, reference.versionId);
+    }
+
+    getNormalizedReference(reference: IBibleReferenceRangeVersion): IBibleReferenceRangeNormalized {
+        // setting all missing properties on reference
+        if (!reference.versionChapterEndNum)
+            reference.versionChapterEndNum =
+                reference.versionChapterNum || BOOK_DATA[reference.bookOsisId].chapters.length;
+        if (!reference.versionChapterNum) reference.versionChapterNum = 1;
+        if (!reference.versionVerseNum) reference.versionVerseNum = 1;
+        if (!reference.versionVerseEndNum)
+            reference.versionVerseEndNum =
+                BOOK_DATA[reference.bookOsisId].chapters[reference.versionChapterEndNum - 1];
+
+        // casting to required type since we are sure that every property is set now
+        type reqRef = Required<IBibleReferenceRangeVersion>;
+        const { normalizedChapterNum, normalizedVerseNum } = this.getNormalizedV11n(<reqRef>(
+            reference
+        ));
+        const {
+            normalizedChapterNum: normalizedChapterEndNum,
+            normalizedVerseNum: normalizedVerseEndNum
+        } = this.getNormalizedV11n({
+            versionId: reference.versionId,
+            bookOsisId: reference.bookOsisId,
+            versionChapterNum: reference.versionChapterEndNum,
+            versionVerseNum: reference.versionVerseEndNum
+        });
 
         return {
             bookOsisId: reference.bookOsisId,
-            chapterNum,
-            verseNum,
-            chapterEndNum,
-            verseEndNum
+            normalizedChapterNum,
+            normalizedVerseNum,
+            normalizedChapterEndNum,
+            normalizedVerseEndNum
         };
     }
 
-    getNormalizedV11n(versionId: number, chapterNum: number, verseNum: number) {
+    getNormalizedV11n(
+        reference: Required<IBibleReferenceVersion>
+    ): Required<IBibleReferenceNormalized> {
         // TODO: normalize this using the v11n-normalisation data from STEPData
-        versionId;
         return {
-            chapterNum,
-            verseNum
+            bookOsisId: reference.bookOsisId,
+            normalizedChapterNum: reference.versionChapterNum,
+            normalizedVerseNum: reference.versionVerseNum
         };
     }
 
-    async getVerses(reference: IBibleReference) {
+    async getVerses(reference: IBibleReferenceRangeVersion) {
         await this.dbReady;
         const nRef = this.getNormalizedReference(reference);
         return getManager().find(BiblePhrase, {
             where: {
                 id: Raw(
                     col =>
-                        `${col} BETWEEN '${generatePhraseId(
-                            nRef.bookOsisId,
-                            nRef.chapterNum,
-                            nRef.verseNum
-                        )}' AND '${generatePhraseId(
-                            nRef.bookOsisId,
-                            nRef.chapterEndNum,
-                            nRef.verseEndNum
+                        `${col} BETWEEN '${generateNormalizedRefId(
+                            nRef
+                        )}' AND '${generateNormalizedRefId(
+                            {
+                                bookOsisId: nRef.bookOsisId,
+                                normalizedChapterNum: nRef.normalizedChapterEndNum,
+                                normalizedVerseNum: nRef.normalizedVerseEndNum
+                            },
+                            true
                         )}' AND cast(${col} % 100000000000 / 100000000 as int) = ${
                             reference.versionId
                         }`
@@ -157,15 +212,32 @@ export class SqlBible {
         });
     }
 
-    normalizePhrase(phrase: BiblePhrase) {
+    async normalizePhrase(phrase: BiblePhrase) {
         if (!phrase.normalizedChapterNum) {
-            const nV11n = this.getNormalizedV11n(
-                phrase.versionId,
-                phrase.versionChapterNum,
-                phrase.versionVerseNum
+            const nV11n = this.getNormalizedV11n(phrase);
+            phrase.normalizedChapterNum = nV11n.normalizedChapterNum;
+            phrase.normalizedVerseNum = nV11n.normalizedVerseNum;
+        }
+    }
+
+    async preparePhraseForDb(phrase: BiblePhrase) {
+        if (
+            !phrase.bookOsisId ||
+            !phrase.versionChapterNum ||
+            !phrase.versionVerseNum ||
+            !phrase.versionId
+        )
+            throw `can't phrase phrase: reference missing or not complete`;
+
+        if (!phrase.normalizedChapterNum) {
+            await this.normalizePhrase(phrase);
+        }
+
+        if (!phrase.phraseNum) {
+            phrase.phraseNum = await this.getNextPhraseIdForNormalizedVerseNum(
+                phrase,
+                phrase.versionId
             );
-            phrase.normalizedChapterNum = nV11n.chapterNum;
-            phrase.normalizedVerseNum = nV11n.verseNum;
         }
     }
 

@@ -7,26 +7,32 @@ import {
     AfterLoad,
     BeforeInsert
 } from 'typeorm';
-import { BiblePhraseOriginalWord } from './BiblePhraseOriginalWord.entity';
-import { BibleCrossReference } from './BibleCrossReference.entity';
-import { BibleNote } from './BibleNote.entity';
+import {
+    BiblePhraseOriginalWord,
+    BibleCrossReference,
+    BibleNote,
+    IBiblePhraseRef,
+    IBibleReferenceVersion
+} from '.';
 import { generatePhraseId, parsePhraseId } from '../utils';
-import { IBiblePhraseRef } from './IBiblePhraseRef.interface';
 
 @Entity()
 // @Index(['versionId', 'bookOsisId', 'versionChapterNum', 'versionVerseNum'])
-export class BiblePhrase implements IBiblePhraseRef {
+export class BiblePhrase implements IBiblePhraseRef, IBibleReferenceVersion {
     @PrimaryColumn()
-    id: string;
+    id: number;
 
     // the id encodes the following attributes in that order:
-    osisBookId: string;
-    normalizedChapterNum?: number;
-    normalizedVerseNum?: number;
+    bookOsisId: string;
+    normalizedChapterNum: number;
+    normalizedVerseNum: number;
     versionId: number;
+    phraseNum: number;
+
+    @Column()
     versionChapterNum: number;
+    @Column()
     versionVerseNum: number;
-    phraseNum?: number;
 
     @Column()
     text: string;
@@ -64,42 +70,32 @@ export class BiblePhrase implements IBiblePhraseRef {
     @JoinColumn()
     notes: BibleNote[];
 
-    constructor(initializer: Partial<BiblePhrase>) {
+    constructor(initializer: Required<IBibleReferenceVersion> & Partial<BiblePhrase>) {
         if (initializer) Object.assign(this, initializer);
-    }
-
-    @BeforeInsert()
-    generateId() {
-        if (
-            !this.osisBookId ||
-            !this.normalizedChapterNum ||
-            !this.normalizedVerseNum ||
-            !this.versionId ||
-            !this.versionChapterNum ||
-            !this.versionVerseNum ||
-            !this.phraseNum
-        )
-            throw "can't generate phrase ID: missing reference information";
-
-        this.id = generatePhraseId(
-            this.osisBookId,
-            this.normalizedChapterNum,
-            this.normalizedVerseNum,
-            this.versionId,
-            this.versionChapterNum,
-            this.versionVerseNum,
-            this.phraseNum
-        );
     }
 
     @AfterLoad()
     parseId() {
+        // since we got this from the DB we know we have an id and we know it has all the data
         const phraseRef = parsePhraseId(this.id!);
-        this.versionVerseNum = phraseRef.versionVerseNum;
-        this.versionChapterNum = phraseRef.versionChapterNum;
-        this.versionId = phraseRef.versionId;
-        this.normalizedVerseNum = phraseRef.normalizedVerseNum;
-        this.normalizedChapterNum = phraseRef.normalizedChapterNum;
-        this.osisBookId = phraseRef.osisBookId;
+        this.versionId = phraseRef.versionId!;
+        this.normalizedVerseNum = phraseRef.normalizedVerseNum!;
+        this.normalizedChapterNum = phraseRef.normalizedChapterNum!;
+        this.bookOsisId = phraseRef.bookOsisId;
+    }
+
+    @BeforeInsert()
+    async prepare() {
+        if (
+            !this.bookOsisId ||
+            !this.normalizedChapterNum ||
+            !this.normalizedVerseNum ||
+            !this.versionId ||
+            !this.phraseNum
+        )
+            throw `can't generate phrase ID: missing reference information. please use ` +
+                `SqlBible::preparePhraseForDb on the phrase object before saving`;
+
+        this.id = generatePhraseId(this);
     }
 }

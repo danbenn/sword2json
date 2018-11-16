@@ -36,7 +36,7 @@ export class BiblePhraseOriginalWord {
 
     @Column({ nullable: true })
     @Index()
-    phraseId?: string;
+    phraseId?: number;
     @ManyToOne(() => BiblePhrase, phrase => phrase.originalWords)
     phrase?: BiblePhrase;
 

@@ -1,11 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class BibleBook {
-    @PrimaryGeneratedColumn()
-    id: string;
+    @PrimaryColumn()
+    versionId: number;
 
-    @Column()
+    @PrimaryColumn()
     osisId: string;
 
     @Column()
@@ -15,9 +15,12 @@ export class BibleBook {
     title: string;
 
     @Column()
+    type: 'ot' | 'nt' | 'ap';
+
+    @Column()
     chaptersMetaJson: string;
 
-    constructor(initializer: BibleBook) {
+    constructor(initializer: Partial<BibleBook>) {
         if (initializer) Object.assign(this, initializer);
     }
 

@@ -1572,7 +1572,7 @@ export const DEFAULT_BIBLE = OT_BOOKS.concat(NT_BOOKS);
  */
 export const APOCRYPHAL_BIBLE = OT_BOOKS.concat(AP_BOOKS, NT_BOOKS);
 
-// TODO: have a fixed-value numbering for bookIds in some kind of object.
+// TODO: have a fixed-value numbering for bookGenericIds in some kind of object.
 //       currently the whole application will break if the order of books in DEFAULT_BIBLE
 //       is changed
 
@@ -1588,7 +1588,7 @@ for (const osisId of AP_BOOKS) {
     bookNum++;
 }
 
-export const getBookIdFromOsisId = (osisId: string) => bookNums[osisId];
+export const getBookGenericIdFromOsisId = (osisId: string) => bookNums[osisId];
 
-export const getOsisIdFromBookId = (bookId: number) =>
-    DEFAULT_BIBLE[bookId - 1] || AP_BOOKS[bookId - 70];
+export const getOsisIdFromBookGenericId = (bookGenericId: number) =>
+    DEFAULT_BIBLE[bookGenericId - 1] || AP_BOOKS[bookGenericId - 70];
