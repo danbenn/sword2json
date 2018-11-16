@@ -11,6 +11,9 @@ export class BibleNote {
     @Column({ nullable: true })
     key?: string;
 
+    @Column({ nullable: true })
+    type?: string;
+
     @Column()
     noteJson: string;
 
@@ -27,9 +30,9 @@ export class BibleNote {
     @ManyToOne(() => BibleSection, section => section.notes)
     section?: BibleSection;
 
-    // constructor(initializer: BibleNotePhrase[]) {
-    //     if (initializer) Object.assign(this, initializer);
-    // }
+    constructor(initializer: Partial<BibleNote>) {
+        if (initializer) Object.assign(this, initializer);
+    }
 
     getPhrases = () => <IBibleNotePhrase[]>JSON.parse(this.noteJson);
 

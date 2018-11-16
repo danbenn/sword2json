@@ -7,7 +7,7 @@ import { BibleCrossReference } from './BibleCrossReference.entity';
 import { BibleNote } from './BibleNote.entity';
 import { Strong } from './Strong';
 
-import { IBibleVerse } from './IBibleVerse.interface';
+import { IBibleVerse } from './IBibleOutput.interface';
 import {
     IBibleReferenceVersion,
     IBibleReferenceRangeVersion,
