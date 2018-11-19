@@ -33,9 +33,17 @@ export const generatePhraseId = (reference: IBiblePhraseRef) => {
     return +refId;
 };
 
+/**
+ * generates SQL for a range-query on the id of the phrases table
+ *
+ * @param {IBibleReferenceRangeNormalized} range
+ * @param {string} [col='id']
+ * @param {number} [versionId]
+ * @returns {string} SQL
+ */
 export const generatePhraseIdSql = (
     range: IBibleReferenceRangeNormalized,
-    col: string = 'id',
+    col = 'id',
     versionId?: number
 ) => {
     const refEnd: IBiblePhraseRef = {
