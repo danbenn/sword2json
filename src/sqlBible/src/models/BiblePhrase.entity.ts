@@ -93,8 +93,10 @@ export class BiblePhrase implements IBiblePhraseRef, IBibleReferenceVersion {
             !this.versionId ||
             !this.phraseNum
         )
-            throw `can't generate phrase ID: missing reference information. please use ` +
-                `SqlBible::preparePhraseForDb on the phrase object before saving`;
+            throw new Error(
+                `can't generate phrase ID: missing reference information. please use ` +
+                    `SqlBible::preparePhraseForDb on the phrase object before saving`
+            );
 
         this.id = generatePhraseId(this);
     }

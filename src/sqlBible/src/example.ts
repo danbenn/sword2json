@@ -4,11 +4,6 @@ import { SqlBible } from './SqlBible';
 import { BiblePhrase, BibleNote, BibleBook } from './models';
 import { getOsisIdFromBookGenericId } from './data/bibleMeta';
 
-// function getRandomChar() {
-//     var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; //abcdefghijklmnopqrstuvwxyz0123456789
-
-//     return possible.charAt(Math.floor(Math.random() * possible.length));
-// }
 const sqlBible = new SqlBible({
     type: 'sqlite',
     database: 'bible.db'
@@ -40,23 +35,24 @@ export const genDb = async () => {
                 let phrases = [];
                 for (let verse = paragraph * 5 + 1; verse <= (paragraph + 1) * 5; verse++) {
                     for (let phraseIdx = 1; phraseIdx <= 22; phraseIdx++) {
-                        let notes;
-                        if (verse % 7 === 0 && phraseIdx === 1) {
-                            const note = new BibleNote();
-                            note.setPhrases([
-                                {
-                                    text: wordGen({ min: 1, max: 30, join: ' ' })
-                                }
-                            ]);
-                            notes = [note];
-                        }
                         const phrase = new BiblePhrase({
                             bookOsisId: getOsisIdFromBookGenericId(bookNum),
                             versionChapterNum: chapter,
                             versionVerseNum: verse,
                             versionId: 1,
                             text: wordGen({ min: 1, max: 2, join: ' ' }),
-                            notes,
+                            notes:
+                                verse % 7 === 0 && phraseIdx === 1
+                                    ? [
+                                          new BibleNote({
+                                              phrases: [
+                                                  {
+                                                      text: wordGen({ min: 1, max: 30, join: ' ' })
+                                                  }
+                                              ]
+                                          })
+                                      ]
+                                    : undefined,
                             bold: true,
                             italic: false,
                             indentLevel: 0,

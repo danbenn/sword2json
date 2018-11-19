@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Index } from 'typeorm';
+import {
+    Entity,
+    Column,
+    PrimaryGeneratedColumn,
+    ManyToOne,
+    Index,
+    AfterLoad,
+    BeforeInsert,
+    BeforeUpdate
+} from 'typeorm';
 import { BiblePhrase } from './BiblePhrase.entity';
 import { BibleSection } from './BibleSection.entity';
 import { IBibleNotePhrase } from './IBibleNotePhrase.interface';
@@ -30,11 +39,20 @@ export class BibleNote {
     @ManyToOne(() => BibleSection, section => section.notes)
     section?: BibleSection;
 
+    phrases: IBibleNotePhrase[];
+
     constructor(initializer: Partial<BibleNote>) {
         if (initializer) Object.assign(this, initializer);
     }
 
-    getPhrases = () => <IBibleNotePhrase[]>JSON.parse(this.noteJson);
+    @AfterLoad()
+    parseNoteJson() {
+        this.phrases = JSON.parse(this.noteJson);
+    }
 
-    setPhrases = (phrases: IBibleNotePhrase[]) => (this.noteJson = JSON.stringify(phrases));
+    @BeforeInsert()
+    @BeforeUpdate()
+    async stringifyNoteJson() {
+        this.noteJson = JSON.stringify(this.phrases);
+    }
 }

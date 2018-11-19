@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
 
 @Entity()
 export class BibleBook {
@@ -20,16 +20,24 @@ export class BibleBook {
     @Column()
     chaptersMetaJson: string;
 
+    chaptersCount: number[];
+
     constructor(initializer: Partial<BibleBook>) {
         if (initializer) Object.assign(this, initializer);
     }
 
-    getChapterVerseCount(chapterNumber: number) {
-        const chaptersMeta = JSON.parse(this.chaptersMetaJson);
-        return chaptersMeta[chapterNumber - 1];
+    @AfterLoad()
+    parseMetaJson() {
+        this.chaptersCount = JSON.parse(this.chaptersMetaJson);
     }
 
-    setChaptersMeta(chaptersCount: number[]) {
-        this.chaptersMetaJson = JSON.stringify(chaptersCount);
+    @BeforeInsert()
+    @BeforeUpdate()
+    async stringifyMetaJson() {
+        this.chaptersMetaJson = JSON.stringify(this.chaptersCount);
+    }
+
+    getChapterVerseCount(chapterNumber: number) {
+        return this.chaptersCount[chapterNumber - 1];
     }
 }

@@ -1,61 +1,136 @@
 import { getBookGenericIdFromOsisId, getOsisIdFromBookGenericId } from './data/bibleMeta';
-import { IBiblePhraseRef } from './models/IBibleReference.interface';
+import {
+    IBiblePhraseRef,
+    IBibleReferenceNormalized,
+    IBibleReferenceRangeNormalized
+} from './models/IBibleReference.interface';
 
-export const generateNormalizedRefId = (reference: IBiblePhraseRef, segments: number) => {
+/**
+ * encodes a normalized reference object into an integer to use in database operations
+ * @param {IBibleReferenceNormalized} reference
+ * @returns {number}
+ */
+export const generateReferenceId = (reference: IBibleReferenceNormalized) => {
     let refId = pad(getBookGenericIdFromOsisId(reference.bookOsisId), 2);
-    if (segments >= 2) {
-        if (reference.normalizedChapterNum) refId += '' + pad(reference.normalizedChapterNum, 3);
-        else refId += '000';
-    }
-    if (segments >= 3) {
-        if (reference.normalizedVerseNum) refId += '' + pad(reference.normalizedVerseNum, 3);
-        else refId += '000';
-    }
-    if (segments >= 4) {
-        if (reference.versionId) refId += '' + pad(reference.versionId, 3);
-        else refId += '000';
-    }
-    if (segments >= 5) {
-        if (reference.phraseNum) refId += '' + pad(reference.phraseNum, 2);
-        else refId += '00';
-    }
+    if (reference.normalizedChapterNum) refId += '' + pad(reference.normalizedChapterNum, 3);
+    else refId += '000';
+    if (reference.normalizedVerseNum) refId += '' + pad(reference.normalizedVerseNum, 3);
+    else refId += '000';
     return +refId;
 };
 
-export const generatePhraseId = (reference: Required<IBiblePhraseRef>) =>
-    generateNormalizedRefId(reference, 5);
+/**
+ * encodes a bible phrase reference object into an integer to use in database operations
+ * @param {Required<IBiblePhraseRef>} reference
+ * @returns {number}
+ */
+export const generatePhraseId = (reference: IBiblePhraseRef) => {
+    let refId = '' + generateReferenceId(reference);
+    if (reference.versionId) refId += '' + pad(reference.versionId, 3);
+    else refId += '000';
+    if (reference.phraseNum) refId += '' + pad(reference.phraseNum, 2);
+    else refId += '00';
+    return +refId;
+};
 
-export function pad(n: number, width: number, z?: string) {
+export const generatePhraseIdSql = (
+    range: IBibleReferenceRangeNormalized,
+    col: string = 'id',
+    versionId?: number
+) => {
+    const refEnd: IBiblePhraseRef = {
+        bookOsisId: range.bookOsisId,
+        normalizedChapterNum: range.normalizedChapterEndNum || range.normalizedChapterNum || 999,
+        normalizedVerseNum:
+            range.normalizedVerseEndNum ||
+            (range.normalizedVerseNum && !range.normalizedChapterEndNum)
+                ? range.normalizedVerseNum
+                : 999,
+        versionId: versionId || 999,
+        phraseNum: 99
+    };
+    let sql = `${col} BETWEEN '${generatePhraseId(range)}' AND '${generatePhraseId(refEnd)}'`;
+
+    // if we query for more than just one verse in a specific version we need to filter out the
+    // version with a little math (due to the nature of our encoded reference integers)
+    if (
+        versionId &&
+        !// condition for a query for a single verse
+        (
+            !!range.normalizedChapterNum &&
+            !!range.normalizedVerseNum &&
+            ((range.normalizedChapterNum === range.normalizedChapterEndNum &&
+                range.normalizedVerseNum === range.normalizedVerseEndNum) ||
+                (!range.normalizedChapterEndNum && !range.normalizedVerseEndNum))
+        )
+    )
+        sql += `AND cast(${col} % 100000000000 / 100000000 as int) = ${versionId}`;
+
+    return sql;
+};
+
+/**
+ * generates a random uppercase char
+ * @returns {string}
+ */
+export function generateRandomChar() {
+    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; //abcdefghijklmnopqrstuvwxyz0123456789
+    return possible.charAt(Math.floor(Math.random() * possible.length));
+}
+
+/**
+ * returns a zero-padded string of a number
+ * @param {number} n the number to be padded
+ * @param {number} width the length or the resulting string
+ * @param {string} [z='0'] padding character
+ * @returns {string}
+ */
+export function pad(n: number, width: number, z?: string): string {
     z = z || '0';
     let nStr = n + '';
     return nStr.length >= width ? nStr : new Array(width - nStr.length + 1).join(z) + n;
 }
 
-export const parsePhraseId = (id: number) => {
-    const ret: Partial<IBiblePhraseRef> = {};
+/**
+ * parses a database reference id into a normalized bible reference object
+ * @param {number} id
+ * @returns {IBibleReferenceNormalized}
+ */
+export const parseReferenceId = (id: number): IBibleReferenceNormalized => {
+    let _id = id;
+    const normalizedVerseNum = _id % 1000;
+    _id -= normalizedVerseNum;
+    _id /= 1000;
+    const normalizedChapterNum = _id % 1000;
+    _id -= normalizedChapterNum;
+    _id /= 1000;
+    const normalizedBookNum = _id;
+
+    return {
+        bookOsisId: getOsisIdFromBookGenericId(normalizedBookNum),
+        normalizedChapterNum,
+        normalizedVerseNum
+    };
+};
+
+/**
+ * parses a database phrase id into a bible phrase reference object
+ * @param {number} id database phrase id
+ * @returns {IBiblePhraseRef}
+ */
+export const parsePhraseId = (id: number): IBiblePhraseRef => {
     let _id = id;
 
-    if (id > 99999999999) {
-        ret.phraseNum = _id % 100;
-        _id -= ret.phraseNum;
-        _id /= 100;
-    }
-    if (id > 99999999) {
-        ret.versionId = _id % 1000;
-        _id -= ret.versionId;
-        _id /= 1000;
-    }
-    if (id > 99999) {
-        ret.normalizedVerseNum = _id % 1000;
-        _id -= ret.normalizedVerseNum;
-        _id /= 1000;
-    }
-    if (id > 99) {
-        ret.normalizedChapterNum = _id % 1000;
-        _id -= ret.normalizedChapterNum;
-        _id /= 1000;
-    }
-    const normalizedBookNum = _id;
-    ret.bookOsisId = getOsisIdFromBookGenericId(normalizedBookNum);
-    return <IBiblePhraseRef>ret;
+    const phraseNum = _id % 100;
+    _id -= phraseNum;
+    _id /= 100;
+    const versionId = _id % 1000;
+    _id -= versionId;
+    _id /= 1000;
+
+    return {
+        ...parseReferenceId(_id),
+        versionId,
+        phraseNum
+    };
 };

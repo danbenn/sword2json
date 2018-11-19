@@ -7,7 +7,7 @@ import {
     AfterLoad,
     BeforeInsert
 } from 'typeorm';
-import { parsePhraseId, generateNormalizedRefId } from '../utils';
+import { parsePhraseId, generateReferenceId } from '../utils';
 import {
     BiblePhrase,
     BibleSection,
@@ -46,20 +46,16 @@ export class BibleCrossReference
     @Column({ nullable: true })
     versionVerseEndNum?: number;
 
-    // this can be inferred from phraseId
-    versionId: number;
-
     @Column({ nullable: true })
     text?: string;
 
-    @Column({
-        nullable: true
-    })
+    @Column({ nullable: true })
     @Index()
     phraseId?: number;
-
     @ManyToOne(() => BiblePhrase, phrase => phrase.crossReferences)
     phrase?: BiblePhrase;
+    // this can be inferred from phraseId
+    versionId: number;
 
     @Column({ nullable: true })
     @Index()
@@ -102,18 +98,17 @@ export class BibleCrossReference
             (this.versionChapterEndNum && !this.normalizedChapterEndNum) ||
             (this.versionVerseEndNum && !this.normalizedVerseEndNum)
         )
-            throw `can't generate references: missing reference information. please use ` +
-                `SqlBible::createCrossReference to create the object`;
-
-        this.normalizedRefId = generateNormalizedRefId(this, 3);
-        if (this.versionChapterEndNum || this.versionVerseEndNum)
-            this.normalizedRefIdEnd = generateNormalizedRefId(
-                {
-                    bookOsisId: this.bookOsisId,
-                    normalizedChapterNum: this.normalizedChapterEndNum,
-                    normalizedVerseNum: this.normalizedVerseEndNum
-                },
-                3
+            throw new Error(
+                `can't generate references: missing reference information. please ` +
+                    `use SqlBible::createCrossReference to create the object`
             );
+
+        this.normalizedRefId = generateReferenceId(this);
+        if (this.versionChapterEndNum || this.versionVerseEndNum)
+            this.normalizedRefIdEnd = generateReferenceId({
+                bookOsisId: this.bookOsisId,
+                normalizedChapterNum: this.normalizedChapterEndNum,
+                normalizedVerseNum: this.normalizedVerseEndNum
+            });
     }
 }
