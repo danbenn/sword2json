@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { BiblePhrase } from './BiblePhrase.entity';
 import { BibleSection } from './BibleSection.entity';
-import { IBibleNotePhrase } from './IBibleNotePhrase.interface';
+import { IBibleNotePhrase } from './BibleNotePhrase.interface';
 
 @Entity()
 export class BibleNote {

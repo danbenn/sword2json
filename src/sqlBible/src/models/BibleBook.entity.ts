@@ -1,7 +1,8 @@
 import { Entity, Column, PrimaryColumn, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { IBibleBook } from './BibleBook.interface';
 
 @Entity()
-export class BibleBook {
+export class BibleBook implements IBibleBook {
     @PrimaryColumn()
     versionId: number;
 
@@ -34,7 +35,9 @@ export class BibleBook {
     @BeforeInsert()
     @BeforeUpdate()
     async stringifyMetaJson() {
-        this.chaptersMetaJson = JSON.stringify(this.chaptersCount);
+        this.chaptersMetaJson = this.chaptersCount
+            ? JSON.stringify(this.chaptersCount)
+            : JSON.stringify([]);
     }
 
     getChapterVerseCount(chapterNumber: number) {

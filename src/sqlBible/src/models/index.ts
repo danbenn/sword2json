@@ -7,15 +7,20 @@ import { BibleCrossReference } from './BibleCrossReference.entity';
 import { BibleNote } from './BibleNote.entity';
 import { Strong } from './Strong';
 
-import { IBibleVerse } from './IBibleOutput.interface';
+import { IBibleVerse } from './BibleOutput.interface';
 import {
-    IBibleReferenceVersion,
-    IBibleReferenceRangeVersion,
+    IBibleReference,
+    IBibleReferenceRange,
     IBibleReferenceNormalized,
     IBibleReferenceRangeNormalized,
     IBiblePhraseRef
-} from './IBibleReference.interface';
-import { IBibleNotePhrase } from './IBibleNotePhrase.interface';
+} from './BibleReference.interface';
+import { IBibleBook, IBibleBookWithContent } from './BibleBook.interface';
+import { IBibleSection, IBibleSectionWithContent } from './BibleSection.interface';
+import { IBibleNotePhrase } from './BibleNotePhrase.interface';
+
+import { BibleInput } from './BibleInput.type';
+import { BibleBookPlaintext, BibleChapterPlaintext } from './BibleBookPlaintext.type';
 
 export {
     BibleVersion,
@@ -28,11 +33,18 @@ export {
     Strong,
     IBibleVerse,
     IBibleNotePhrase,
-    IBibleReferenceVersion,
-    IBibleReferenceRangeVersion,
+    IBibleReference,
+    IBibleReferenceRange,
     IBibleReferenceNormalized,
     IBibleReferenceRangeNormalized,
-    IBiblePhraseRef
+    IBiblePhraseRef,
+    IBibleBook,
+    IBibleBookWithContent,
+    IBibleSection,
+    IBibleSectionWithContent,
+    BibleInput,
+    BibleChapterPlaintext,
+    BibleBookPlaintext
 };
 export const ENTITIES = [
     BibleVersion,

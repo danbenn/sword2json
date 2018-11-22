@@ -1,7 +1,7 @@
 const wordGen = require('random-words');
 
 import { SqlBible } from './SqlBible';
-import { BiblePhrase, BibleNote, BibleBook } from './models';
+import { BiblePhrase, BibleNote, IBibleSectionWithContent } from './models';
 import { getOsisIdFromBookGenericId } from './data/bibleMeta';
 
 const sqlBible = new SqlBible({
@@ -11,16 +11,7 @@ const sqlBible = new SqlBible({
 
 export const genDb = async () => {
     for (let bookNum = 1; bookNum <= 2; bookNum++) {
-        const book = await sqlBible.addBook(
-            new BibleBook({
-                versionId: 1,
-                number: bookNum,
-                osisId: getOsisIdFromBookGenericId(bookNum),
-                title: wordGen({ min: 1, max: 3, join: ' ' }),
-                type: bookNum < 40 ? 'ot' : 'nt',
-                chaptersMetaJson: JSON.stringify({})
-            })
-        );
+        const paragraphs: IBibleSectionWithContent[] = [];
         for (let chapter = 1; chapter <= 15; chapter++) {
             for (let paragraph = 0; paragraph < 5; paragraph++) {
                 console.log(
@@ -72,10 +63,17 @@ export const genDb = async () => {
                         phrases.push(phrase);
                     }
                 }
-                await sqlBible.addParagraph(phrases);
+                paragraphs.push({ level: 0, content: { phrases, type: 'phrases' } });
             }
         }
-        await sqlBible.generateBookMetadata(book);
+        await sqlBible.addBookWithContent({
+            versionId: 1,
+            number: bookNum,
+            osisId: getOsisIdFromBookGenericId(bookNum),
+            title: wordGen({ min: 1, max: 3, join: ' ' }),
+            type: bookNum < 40 ? 'ot' : 'nt',
+            content: { type: 'sections', sections: paragraphs }
+        });
     }
 };
 

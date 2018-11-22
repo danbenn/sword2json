@@ -3,14 +3,14 @@ import {
     IBiblePhraseRef,
     IBibleReferenceNormalized,
     IBibleReferenceRangeNormalized
-} from './models/IBibleReference.interface';
+} from './models/BibleReference.interface';
 
 /**
  * encodes a normalized reference object into an integer to use in database operations
  * @param {IBibleReferenceNormalized} reference
  * @returns {number}
  */
-export const generateReferenceId = (reference: IBibleReferenceNormalized) => {
+export const generateReferenceId = (reference: IBibleReferenceNormalized): number => {
     let refId = pad(getBookGenericIdFromOsisId(reference.bookOsisId), 2);
     if (reference.normalizedChapterNum) refId += '' + pad(reference.normalizedChapterNum, 3);
     else refId += '000';
@@ -21,10 +21,10 @@ export const generateReferenceId = (reference: IBibleReferenceNormalized) => {
 
 /**
  * encodes a bible phrase reference object into an integer to use in database operations
- * @param {Required<IBiblePhraseRef>} reference
+ * @param {IBiblePhraseRef} reference
  * @returns {number}
  */
-export const generatePhraseId = (reference: IBiblePhraseRef) => {
+export const generatePhraseId = (reference: IBiblePhraseRef): number => {
     let refId = '' + generateReferenceId(reference);
     if (reference.versionId) refId += '' + pad(reference.versionId, 3);
     else refId += '000';
@@ -38,15 +38,11 @@ export const generatePhraseId = (reference: IBiblePhraseRef) => {
  *
  * @param {IBibleReferenceRangeNormalized} range
  * @param {string} [col='id']
- * @param {number} [versionId]
  * @returns {string} SQL
  */
-export const generatePhraseIdSql = (
-    range: IBibleReferenceRangeNormalized,
-    col = 'id',
-    versionId?: number
-) => {
+export const generatePhraseIdSql = (range: IBibleReferenceRangeNormalized, col = 'id') => {
     const refEnd: IBiblePhraseRef = {
+        isNormalized: true,
         bookOsisId: range.bookOsisId,
         normalizedChapterNum: range.normalizedChapterEndNum || range.normalizedChapterNum || 999,
         normalizedVerseNum:
@@ -54,7 +50,7 @@ export const generatePhraseIdSql = (
             (range.normalizedVerseNum && !range.normalizedChapterEndNum)
                 ? range.normalizedVerseNum
                 : 999,
-        versionId: versionId || 999,
+        versionId: range.versionId || 999,
         phraseNum: 99
     };
     let sql = `${col} BETWEEN '${generatePhraseId(range)}' AND '${generatePhraseId(refEnd)}'`;
@@ -62,7 +58,7 @@ export const generatePhraseIdSql = (
     // if we query for more than just one verse in a specific version we need to filter out the
     // version with a little math (due to the nature of our encoded reference integers)
     if (
-        versionId &&
+        range.versionId &&
         !// condition for a query for a single verse
         (
             !!range.normalizedChapterNum &&
@@ -72,7 +68,30 @@ export const generatePhraseIdSql = (
                 (!range.normalizedChapterEndNum && !range.normalizedVerseEndNum))
         )
     )
-        sql += `AND cast(${col} % 100000000000 / 100000000 as int) = ${versionId}`;
+        sql += `AND cast(${col} % 100000000000 / 100000000 as int) = ${range.versionId}`;
+
+    return sql;
+};
+
+/**
+ * generates SQL for a range-query for reference ids
+ *
+ * @param {IBibleReferenceRangeNormalized} range
+ * @param {string} [col='id']
+ * @returns {string} SQL
+ */
+export const generateReferenceIdSql = (range: IBibleReferenceRangeNormalized, col = 'id') => {
+    const refEnd: IBibleReferenceRangeNormalized = {
+        isNormalized: true,
+        bookOsisId: range.bookOsisId,
+        normalizedChapterNum: range.normalizedChapterEndNum || range.normalizedChapterNum || 999,
+        normalizedVerseNum:
+            range.normalizedVerseEndNum ||
+            (range.normalizedVerseNum && !range.normalizedChapterEndNum)
+                ? range.normalizedVerseNum
+                : 999
+    };
+    let sql = `${col} BETWEEN '${generateReferenceId(range)}' AND '${generateReferenceId(refEnd)}'`;
 
     return sql;
 };
@@ -81,8 +100,8 @@ export const generatePhraseIdSql = (
  * generates a random uppercase char
  * @returns {string}
  */
-export function generateRandomChar() {
-    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; //abcdefghijklmnopqrstuvwxyz0123456789
+export function generateRandomChar(): string {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // abcdefghijklmnopqrstuvwxyz0123456789
     return possible.charAt(Math.floor(Math.random() * possible.length));
 }
 
@@ -115,6 +134,7 @@ export const parseReferenceId = (id: number): IBibleReferenceNormalized => {
     const normalizedBookNum = _id;
 
     return {
+        isNormalized: true,
         bookOsisId: getOsisIdFromBookGenericId(normalizedBookNum),
         normalizedChapterNum,
         normalizedVerseNum

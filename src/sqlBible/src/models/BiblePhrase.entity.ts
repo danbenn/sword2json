@@ -12,15 +12,16 @@ import {
     BibleCrossReference,
     BibleNote,
     IBiblePhraseRef,
-    IBibleReferenceVersion
+    IBibleReference
 } from '.';
 import { generatePhraseId, parsePhraseId } from '../utils';
 
 @Entity()
 // @Index(['versionId', 'bookOsisId', 'versionChapterNum', 'versionVerseNum'])
-export class BiblePhrase implements IBiblePhraseRef, IBibleReferenceVersion {
+export class BiblePhrase implements IBiblePhraseRef, IBibleReference {
     @PrimaryColumn()
     id: number;
+    isNormalized: true;
 
     // the id encodes the following attributes in that order:
     bookOsisId: string;
@@ -42,6 +43,12 @@ export class BiblePhrase implements IBiblePhraseRef, IBibleReferenceVersion {
 
     @Column({ nullable: true })
     italic?: boolean;
+
+    @Column({ nullable: true })
+    divineName?: boolean;
+
+    @Column({ nullable: true })
+    jesusWords?: boolean;
 
     @Column({ nullable: true })
     indentLevel?: number;
@@ -70,7 +77,7 @@ export class BiblePhrase implements IBiblePhraseRef, IBibleReferenceVersion {
     @JoinColumn()
     notes: BibleNote[];
 
-    constructor(initializer: Required<IBibleReferenceVersion> & Partial<BiblePhrase>) {
+    constructor(initializer: Partial<BiblePhrase>) {
         if (initializer) Object.assign(this, initializer);
     }
 

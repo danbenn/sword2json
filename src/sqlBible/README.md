@@ -24,20 +24,12 @@ const esvVersionId = await sqlBible.addVersion(
     })
 );
 
-// ... and a bible book
-const bookGenesis = await sqlBible.addBook(
-    new BibleBook({
-        versionId: esvVersionId,
-        number: 1, // order of book in version
-        osisId: 'Gen',
-        title: 'Genesis',
-        type: 'ot'
-    })
-);
+// you add one bible book at a time. first we compile the content of the book
 
 // ideally, adding verses should be done paragraph by paragraph:
 // a paragraph is a list of phrases:
 const phrases: BiblePhrase[] = [];
+
 
 // we add cross references directly to a phrase
 // (we use a sqlBible-method here since normalized references need to be created)
@@ -78,36 +70,62 @@ const phrase2 = new BiblePhrase({
 
 phrases.push(phrase1, phrase2);
 
-// do some magic and persist to database
-const newPhrases = await sqlBible.addParagraph(phrases);
+const phrases1 = phrases2 = phrases3 = phrases;
 
-// you can also just persist phrases without creating a paragraph
-const newPhrases2 = await sqlBible.addPhrases(phrases);
+const bookContent = {
+    type: 'sections';
+    sections: [
+        {
+            level: 1,
+            title: 'Creation',
+            content: {
+                type: 'sections',
+                sections: [
+                    {
+                        level: 0,
+                        content: {
+                            type: 'phrases',
+                            phrases: phrases1
+                        }
+                    }, {
+                        level: 0,
+                        content: {
+                            type: 'phrases',
+                            phrases: phrases2
+                        }
+                    }
+                ]
+            }
+        }, {
+            level: 1,
+            title: 'Fall',
+            content: {
+                type: 'sections',
+                sections: [
+                    {
+                        level: 0,
+                        content: {
+                            type: 'phrases',
+                            phrases: phrases3
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
 
-// ... or just a single phrase
-const newPhrase = await sqlBible.addPhrase(phrase1);
-
-// ... in which case you need to take care of adding paragraph sections yourself:
-const newSection = await sqlBible.addSection(
-    new BibleSection({
-        level: 0,
-        phraseStartId: newPhrases[0].id,
-        phraseEndId: newPhrases[newPhrases.length - 1].id
+// ... and then feed it to sqlBible
+const bookGenesis = await sqlBible.addBook(
+    new BibleBook({
+        versionId: esvVersionId,
+        number: 1, // order of book in version
+        osisId: 'Gen',
+        title: 'Genesis',
+        type: 'ot',
+        content
     })
 );
-
-// you would do the same for higher level sections
-const newTitleSection = await sqlBible.addSection(
-    new BibleSection({
-        level: 1,
-        title: 'Creation',
-        phraseStartId: newPhrases[0].id,
-        phraseEndId: newPhrases[newPhrases.length - 1].id
-    })
-);
-
-// after you have completed a book, we need to generate some metadata
-sqlBible.generateBookMetadata(bookGenesis);
 
 /**
  * OUTPUT

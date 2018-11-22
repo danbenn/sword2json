@@ -1,12 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinColumn, Index } from 'typeorm';
 import { BibleNote } from './BibleNote.entity';
 import { BibleCrossReference } from './BibleCrossReference.entity';
+import { IBibleSection } from './BibleSection.interface';
 
 @Entity()
 @Index(['phraseStartId', 'phraseEndId'])
-export class BibleSection {
+export class BibleSection implements IBibleSection {
     @PrimaryGeneratedColumn()
-    id?: number;
+    id: number;
 
     @Column()
     level: number;
@@ -32,7 +33,7 @@ export class BibleSection {
     @JoinColumn()
     crossReferences?: BibleCrossReference[];
 
-    constructor(initializer: BibleSection) {
+    constructor(initializer: Partial<BibleSection>) {
         if (initializer) Object.assign(this, initializer);
     }
 }

@@ -5,21 +5,17 @@ import {
     ManyToOne,
     Index,
     AfterLoad,
-    BeforeInsert
+    BeforeInsert,
+    BeforeUpdate
 } from 'typeorm';
 import { parsePhraseId, generateReferenceId } from '../utils';
-import {
-    BiblePhrase,
-    BibleSection,
-    IBibleReferenceRangeVersion,
-    IBibleReferenceRangeNormalized
-} from '.';
+import { BiblePhrase, BibleSection, IBibleReferenceRangeNormalized } from '.';
 
 @Entity()
-export class BibleCrossReference
-    implements IBibleReferenceRangeVersion, IBibleReferenceRangeNormalized {
+export class BibleCrossReference implements IBibleReferenceRangeNormalized {
     @PrimaryGeneratedColumn()
     id?: number;
+    isNormalized: true;
 
     @Column()
     normalizedRefId: number;
@@ -33,6 +29,9 @@ export class BibleCrossReference
     normalizedChapterEndNum?: number;
     normalizedVerseNum?: number;
     normalizedVerseEndNum?: number;
+
+    @Column()
+    versionId: number;
 
     @Column({ nullable: true })
     versionChapterNum?: number;
@@ -54,8 +53,6 @@ export class BibleCrossReference
     phraseId?: number;
     @ManyToOne(() => BiblePhrase, phrase => phrase.crossReferences)
     phrase?: BiblePhrase;
-    // this can be inferred from phraseId
-    versionId: number;
 
     @Column({ nullable: true })
     @Index()
@@ -70,12 +67,6 @@ export class BibleCrossReference
 
     @AfterLoad()
     parseId() {
-        if (this.phraseId) {
-            const phraseRef = parsePhraseId(this.phraseId);
-            // a phraseId has versionId encoded
-            this.versionId = phraseRef.versionId!;
-        }
-
         // since we got this from the DB we know we have an id and we know it has all the data
         const normalizedRef = parsePhraseId(this.normalizedRefId!);
         this.bookOsisId = normalizedRef.bookOsisId;
@@ -90,6 +81,7 @@ export class BibleCrossReference
     }
 
     @BeforeInsert()
+    @BeforeUpdate()
     async prepare() {
         if (
             !this.bookOsisId ||
@@ -97,18 +89,28 @@ export class BibleCrossReference
             (this.versionVerseNum && !this.normalizedVerseNum) ||
             (this.versionChapterEndNum && !this.normalizedChapterEndNum) ||
             (this.versionVerseEndNum && !this.normalizedVerseEndNum)
-        )
-            throw new Error(
-                `can't generate references: missing reference information. please ` +
-                    `use SqlBible::createCrossReference to create the object`
-            );
+        ) {
+            // throw new Error(
+            //     `can't generate references: missing reference information. please ` +
+            //         `use SqlBible::createCrossReference to create the object`
+            // );
 
-        this.normalizedRefId = generateReferenceId(this);
-        if (this.versionChapterEndNum || this.versionVerseEndNum)
-            this.normalizedRefIdEnd = generateReferenceId({
-                bookOsisId: this.bookOsisId,
-                normalizedChapterNum: this.normalizedChapterEndNum,
-                normalizedVerseNum: this.normalizedVerseEndNum
+            // we need to allow saving cross references without normalized references during
+            // initial book creation (since at creation time not all information is available
+            // to do the normalization)
+            this.normalizedRefId = generateReferenceId({
+                isNormalized: true,
+                bookOsisId: this.bookOsisId
             });
+        } else {
+            this.normalizedRefId = generateReferenceId(this);
+            if (this.versionChapterEndNum || this.versionVerseEndNum)
+                this.normalizedRefIdEnd = generateReferenceId({
+                    isNormalized: true,
+                    bookOsisId: this.bookOsisId,
+                    normalizedChapterNum: this.normalizedChapterEndNum,
+                    normalizedVerseNum: this.normalizedVerseEndNum
+                });
+        }
     }
 }
