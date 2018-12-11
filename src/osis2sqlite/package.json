@@ -1,5 +1,5 @@
 {
-  "name": "osis2json",
+  "name": "osis2sqlite",
   "version": "0.1.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",

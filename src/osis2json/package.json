@@ -11,5 +11,5 @@
     "bible-passage-reference-parser": "^2.0.1",
     "sax": "^1.2.4",
     "stream": "^0.0.2"
-  },
+  }
 }
